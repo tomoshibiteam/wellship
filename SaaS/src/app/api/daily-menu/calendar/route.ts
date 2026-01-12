@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
 import { MealType } from '@prisma/client';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 /**
  * GET /api/daily-menu/calendar?vesselId=xxx&startDate=2024-12-01&endDate=2024-12-31
@@ -18,30 +18,18 @@ export async function GET(request: NextRequest) {
         }
 
         // 期間内の献立を取得（レシピ情報含む）
-        const menuPlans = await prisma.menuPlan.findMany({
-            where: {
-                OR: [
-                    { vesselId },
-                    { vesselId: null },
-                ],
-                date: {
-                    gte: startDate,
-                    lte: endDate,
-                },
-            },
-            include: {
-                recipeLinks: {
-                    include: {
-                        recipe: {
-                            select: {
-                                name: true,
-                                category: true,
-                            },
-                        },
-                    },
-                },
-            },
-        });
+        const supabase = await createSupabaseServerClient();
+        const { data: menuPlans, error } = await supabase
+            .from('MenuPlan')
+            .select(
+                'date,mealType,recipeLinks:MenuPlanRecipe(recipe:Recipe(name,category))',
+            )
+            .or(`vesselId.eq.${vesselId},vesselId.is.null`)
+            .gte('date', startDate)
+            .lte('date', endDate);
+        if (error) {
+            throw error;
+        }
 
         // 日付ごとにサマリーを作成
         const dates: Record<string, boolean> = {};
@@ -51,7 +39,7 @@ export async function GET(request: NextRequest) {
             dinner: { count: number; main?: string };
         }> = {};
 
-        for (const plan of menuPlans) {
+        for (const plan of menuPlans ?? []) {
             dates[plan.date] = true;
 
             if (!summary[plan.date]) {
@@ -63,12 +51,21 @@ export async function GET(request: NextRequest) {
             }
 
             const mealKey = plan.mealType as MealType;
-            const recipeCount = plan.recipeLinks.length;
-            const mainRecipe = plan.recipeLinks.find(r => r.recipe.category === 'main');
+            const links = plan.recipeLinks ?? [];
+            const recipeCount = links.length;
+            const mainRecipe = links.find((r: any) => {
+                const recipe = Array.isArray(r.recipe) ? r.recipe[0] : r.recipe;
+                return recipe?.category === 'main';
+            });
+            const mainRecipeResolved = mainRecipe
+                ? Array.isArray((mainRecipe as any).recipe)
+                    ? (mainRecipe as any).recipe[0]
+                    : (mainRecipe as any).recipe
+                : null;
 
             summary[plan.date][mealKey] = {
                 count: recipeCount,
-                main: mainRecipe?.recipe.name,
+                main: mainRecipeResolved?.name,
             };
         }
 

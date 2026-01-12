@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
 import { MealType } from '@prisma/client';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 /**
  * POST /api/daily-menu/import-from-planning
@@ -16,18 +16,19 @@ export async function POST(request: NextRequest) {
         }
 
         // 既存のAI生成献立を検索
-        const sourceMenuPlan = await prisma.menuPlan.findFirst({
-            where: {
-                vesselId,
-                date: targetDate,
-                mealType: mealType as MealType,
-            },
-            include: {
-                recipeLinks: true,
-            },
-        });
+        const supabase = await createSupabaseServerClient();
+        const { data: sourceMenuPlan, error } = await supabase
+            .from('MenuPlan')
+            .select('id,recipeLinks:MenuPlanRecipe(recipeId)')
+            .eq('vesselId', vesselId)
+            .eq('date', targetDate)
+            .eq('mealType', mealType as MealType)
+            .maybeSingle();
+        if (error) {
+            throw error;
+        }
 
-        if (!sourceMenuPlan || sourceMenuPlan.recipeLinks.length === 0) {
+        if (!sourceMenuPlan || !sourceMenuPlan.recipeLinks || sourceMenuPlan.recipeLinks.length === 0) {
             return NextResponse.json({
                 error: `${targetDate}の${mealType}には献立が設定されていません。先に「献立＆調達」でAI生成してください。`
             }, { status: 404 });

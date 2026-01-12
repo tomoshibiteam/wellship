@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/options';
+import { getCurrentUser } from '@/lib/auth/session';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const user = await getCurrentUser();
+    if (!user) {
+        return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -14,7 +13,7 @@ export async function POST(request: NextRequest) {
 
     if (!date || !mealType || !oldRecipeId || !newRecipeId) {
         return NextResponse.json(
-            { error: 'date, mealType, oldRecipeId, and newRecipeId are required' },
+            { error: 'date / mealType / oldRecipeId / newRecipeId は必須です' },
             { status: 400 }
         );
     }
@@ -22,34 +21,23 @@ export async function POST(request: NextRequest) {
     const planId = `plan-${date}-${mealType}`;
 
     try {
-        // 古いレシピを削除し、新しいレシピを追加
-        await prisma.$transaction(async (tx) => {
-            // 古いレシピリンクを削除
-            await tx.menuPlanRecipe.deleteMany({
-                where: {
-                    menuPlanId: planId,
-                    recipeId: oldRecipeId,
-                },
-            });
+        const supabase = await createSupabaseServerClient();
+        await supabase
+            .from('MenuPlanRecipe')
+            .delete()
+            .eq('menuPlanId', planId)
+            .eq('recipeId', oldRecipeId);
 
-            // 新しいレシピリンクを追加
-            await tx.menuPlanRecipe.create({
-                data: {
-                    menuPlanId: planId,
-                    recipeId: newRecipeId,
-                },
-            });
+        await supabase.from('MenuPlanRecipe').insert({
+            menuPlanId: planId,
+            recipeId: newRecipeId,
         });
 
-        // 更新後のプランを取得
-        const updatedPlan = await prisma.menuPlan.findUnique({
-            where: { id: planId },
-            include: {
-                recipeLinks: {
-                    include: { recipe: true },
-                },
-            },
-        });
+        const { data: updatedPlan } = await supabase
+            .from('MenuPlan')
+            .select('id,date,mealType,healthScore,recipeLinks:MenuPlanRecipe(recipe:Recipe(*))')
+            .eq('id', planId)
+            .maybeSingle();
 
         return NextResponse.json({
             success: true,
@@ -58,7 +46,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error('Replace error:', error);
         return NextResponse.json(
-            { error: 'Failed to replace recipe' },
+            { error: 'レシピの差し替えに失敗しました' },
             { status: 500 }
         );
     }

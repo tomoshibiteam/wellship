@@ -1,13 +1,20 @@
 "use server";
 
-import { prisma } from "@/lib/db/prisma";
-import { Ingredient } from "@prisma/client";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   DefaultStartDate,
   ProcurementItem,
   ProcurementRequest,
   ProcurementResult,
 } from "./types";
+
+type IngredientRow = {
+  id: string;
+  name: string;
+  unit: string;
+  storageType: string;
+  costPerUnit?: number | null;
+};
 
 type LatestPlanRange =
   | {
@@ -22,10 +29,20 @@ type LatestPlanRange =
 // モデル追加なしの「B案」として MenuPlan の日付と updatedAt を利用する。
 // generateMenuPlan 時に古い日付を削除しているため、DB に存在する MenuPlan 群が「最新バッチ」とみなせる前提。
 async function getLatestPlanRange(): Promise<LatestPlanRange> {
-  const plans = await prisma.menuPlan.findMany({
-    select: { date: true },
-    orderBy: [{ updatedAt: "desc" }],
-  });
+  const supabase = await createSupabaseServerClient();
+  const { data: plans, error } = await supabase
+    .from("MenuPlan")
+    .select("date")
+    .order("updatedAt", { ascending: false });
+  if (error || !plans) {
+    console.error("Failed to load menu plans", {
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint,
+      code: error?.code,
+    });
+    return null;
+  }
   if (!plans.length) return null;
   const dates = Array.from(new Set(plans.map((p) => p.date))).sort();
   return {
@@ -82,29 +99,18 @@ export async function generateProcurementList(
   const endStr = formatDateString(end);
 
   // Fetch MenuPlans in range with recipes and ingredients
-  const plans = await prisma.menuPlan.findMany({
-    where: {
-      date: {
-        gte: startStr,
-        lte: endStr,
-      },
-    },
-    include: {
-      recipeLinks: {
-        include: {
-          recipe: {
-            include: {
-              ingredients: {
-                include: {
-                  ingredient: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
+  const supabase = await createSupabaseServerClient();
+  const { data: plans, error: plansError } = await supabase
+    .from("MenuPlan")
+    .select(
+      "date,crewCount,budgetPerPerson,recipeLinks:MenuPlanRecipe(recipe:Recipe(ingredients:RecipeIngredient(amount,ingredient:Ingredient(id,name,unit,storageType,costPerUnit))))",
+    )
+    .gte("date", startStr)
+    .lte("date", endStr);
+  if (plansError) {
+    console.error("Failed to load menu plans", plansError);
+    throw plansError;
+  }
 
   // 献立がなければ空リストを返して UI 側でメッセージ表示
   if (!plans.length) {
@@ -129,14 +135,21 @@ export async function generateProcurementList(
   // Sum ingredient.amount * crewCount per ingredientId across all recipes in the range.
   const map = new Map<
     string,
-    { ingredient: Ingredient; plannedAmount: number }
+    { ingredient: IngredientRow; plannedAmount: number }
   >();
 
   for (const plan of plans) {
     const crewCount = plan.crewCount || 20; // フォールバック: 20人
-    for (const link of plan.recipeLinks) {
-      for (const ri of link.recipe.ingredients) {
-        const ing = ri.ingredient;
+    const links = plan.recipeLinks ?? [];
+    for (const link of links) {
+      const rawRecipe = link.recipe as any;
+      const recipe = Array.isArray(rawRecipe) ? rawRecipe[0] : rawRecipe;
+      const ingredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
+      if (!ingredients.length) continue;
+      for (const ri of ingredients) {
+        const rawIng = ri.ingredient;
+        const ing = Array.isArray(rawIng) ? rawIng[0] : rawIng;
+        if (!ing) continue;
         const amountForCrew = ri.amount * crewCount; // 乗船人数を掛ける
         const existing = map.get(ing.id);
         if (existing) {
@@ -148,24 +161,47 @@ export async function generateProcurementList(
     }
   }
 
-  const adjustments = await prisma.procurementAdjustment.findMany({
-    where: { startDate: startStr, endDate: endStr },
-  });
+  const { data: adjustments, error: adjustmentError } = await supabase
+    .from("ProcurementAdjustment")
+    .select("*")
+    .eq("startDate", startStr)
+    .eq("endDate", endStr);
+  if (adjustmentError) {
+    console.error("Failed to load procurement adjustments", adjustmentError);
+    throw adjustmentError;
+  }
   const adjustmentMap = new Map<string, typeof adjustments[number]>();
-  adjustments.forEach((adj) => adjustmentMap.set(adj.ingredientId, adj));
+  adjustments?.forEach((adj) => adjustmentMap.set(adj.ingredientId, adj));
 
   // Remove stale adjustments for ingredients no longer in plan
   const idsInPlan = Array.from(map.keys());
-  await prisma.procurementAdjustment.deleteMany({
-    where: {
-      startDate: startStr,
-      endDate: endStr,
-      ingredientId: { notIn: idsInPlan },
-    },
-  });
+  if (idsInPlan.length === 0) {
+    await supabase
+      .from("ProcurementAdjustment")
+      .delete()
+      .eq("startDate", startStr)
+      .eq("endDate", endStr);
+  } else {
+    const notInFilter = `(${idsInPlan.map((id) => `"${id}"`).join(",")})`;
+    await supabase
+      .from("ProcurementAdjustment")
+      .delete()
+      .eq("startDate", startStr)
+      .eq("endDate", endStr)
+      .not("ingredientId", "in", notInFilter);
+  }
 
   // Upsert adjustments for current plan ingredients, updating plannedAmount,
   // and if the user未調整 (orderAmount == previous planned) なら新しい planned に追従。
+  const upserts: Array<{
+    ingredientId: string;
+    startDate: string;
+    endDate: string;
+    plannedAmount: number;
+    orderAmount: number;
+    inStock: boolean;
+    unitPrice: number;
+  }> = [];
   for (const { ingredient, plannedAmount } of map.values()) {
     const existing = adjustmentMap.get(ingredient.id);
     const unitCost = existing?.unitPrice ?? ingredient.costPerUnit ?? 0;
@@ -177,37 +213,38 @@ export async function generateProcurementList(
         : plannedAmount;
     const inStock = existing?.inStock ?? false;
 
-    await prisma.procurementAdjustment.upsert({
-      where: {
-        ingredientId_startDate_endDate: {
-          ingredientId: ingredient.id,
-          startDate: startStr,
-          endDate: endStr,
-        },
-      },
-      update: {
-        plannedAmount,
-        orderAmount,
-        inStock,
-        unitPrice: unitCost,
-      },
-      create: {
-        ingredientId: ingredient.id,
-        startDate: startStr,
-        endDate: endStr,
-        plannedAmount,
-        orderAmount,
-        inStock,
-        unitPrice: unitCost,
-      },
+    upserts.push({
+      ingredientId: ingredient.id,
+      startDate: startStr,
+      endDate: endStr,
+      plannedAmount,
+      orderAmount,
+      inStock,
+      unitPrice: unitCost,
     });
   }
 
-  const latestAdjustments = await prisma.procurementAdjustment.findMany({
-    where: { startDate: startStr, endDate: endStr },
-  });
+  if (upserts.length > 0) {
+    const { error: upsertError } = await supabase
+      .from("ProcurementAdjustment")
+      .upsert(upserts, { onConflict: "ingredientId,startDate,endDate" });
+    if (upsertError) {
+      console.error("Failed to upsert procurement adjustments", upsertError);
+      throw upsertError;
+    }
+  }
+
+  const { data: latestAdjustments, error: latestError } = await supabase
+    .from("ProcurementAdjustment")
+    .select("*")
+    .eq("startDate", startStr)
+    .eq("endDate", endStr);
+  if (latestError) {
+    console.error("Failed to load updated procurement adjustments", latestError);
+    throw latestError;
+  }
   const latestMap = new Map<string, typeof latestAdjustments[number]>();
-  latestAdjustments.forEach((adj) => latestMap.set(adj.ingredientId, adj));
+  latestAdjustments?.forEach((adj) => latestMap.set(adj.ingredientId, adj));
 
   const items: ProcurementItem[] = [];
   for (const { ingredient } of map.values()) {
@@ -217,7 +254,7 @@ export async function generateProcurementList(
       ingredientId: ingredient.id,
       name: ingredient.name,
       unit: ingredient.unit,
-      storageType: ingredient.storageType,
+      storageType: ingredient.storageType as ProcurementItem["storageType"],
       plannedAmount: adj.plannedAmount,
       orderAmount: adj.orderAmount,
       inStock: adj.inStock,

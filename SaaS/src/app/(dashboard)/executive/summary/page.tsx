@@ -1,26 +1,31 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth/session';
 import { PageHeader } from '@/components/page-header';
-import { prisma } from '@/lib/db/prisma';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 // 統計データを取得
 async function getStatistics(companyId: string) {
+    const supabase = await createSupabaseServerClient();
     // 船舶数
-    const vesselCount = await prisma.vessel.count({
-        where: { companyId },
-    });
+    const { count: vesselCount = 0 } = await supabase
+        .from('Vessel')
+        .select('*', { count: 'exact', head: true })
+        .eq('companyId', companyId);
 
     // フィードバック統計
-    const feedbacks = await prisma.mealFeedback.findMany({
-        where: {
-            vessel: { companyId },
-        },
-        select: {
-            satisfaction: true,
-            leftover: true,
-            date: true,
-        },
-    });
+    const { data: vessels } = await supabase
+        .from('Vessel')
+        .select('id')
+        .eq('companyId', companyId);
+    const vesselIds = (vessels ?? []).map((v) => v.id);
+
+    const { data: feedbacksRaw } = vesselIds.length
+        ? await supabase
+              .from('MealFeedback')
+              .select('satisfaction,leftover,date')
+              .in('vesselId', vesselIds)
+        : { data: [] };
+    const feedbacks = feedbacksRaw ?? [];
 
     // 平均満足度
     const avgSatisfaction = feedbacks.length > 0

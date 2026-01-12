@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { signOut } from 'next-auth/react';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { UserRole } from '@/lib/types/auth';
 import RecipeDebugTableButton from '@/components/sidebar/recipe-debug-button';
 
@@ -15,6 +15,13 @@ type NavItem = {
 };
 
 const allNavItems: NavItem[] = [
+  {
+    href: '/recipes',
+    label: 'レシピ一覧',
+    description: '献立生成に使うレシピ管理',
+    icon: '📖',
+    roles: ['CHEF'],
+  },
   {
     href: '/planning',
     label: '献立＆調達',
@@ -94,7 +101,10 @@ export function SidebarNav({ isOpen, user }: SidebarNavProps) {
     : [];
 
   const handleSignOut = () => {
-    signOut({ callbackUrl: '/login' });
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.signOut().finally(() => {
+      window.location.href = '/login';
+    });
   };
 
   return (

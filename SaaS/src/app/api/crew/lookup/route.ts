@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function POST(request: Request) {
     try {
@@ -13,17 +13,12 @@ export async function POST(request: Request) {
             );
         }
 
-        const crewMember = await prisma.crewMember.findUnique({
-            where: { cardCode },
-            select: {
-                id: true,
-                name: true,
-                vesselId: true,
-                vessel: {
-                    select: { name: true },
-                },
-            },
-        });
+        const supabase = await createSupabaseServerClient();
+        const { data: crewMember } = await supabase
+            .from('CrewMember')
+            .select('id,name,vesselId,vessel:Vessel(name)')
+            .eq('cardCode', cardCode)
+            .maybeSingle();
 
         if (!crewMember) {
             return NextResponse.json(

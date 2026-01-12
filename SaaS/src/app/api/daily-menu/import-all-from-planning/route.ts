@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 /**
  * POST /api/daily-menu/import-all-from-planning
@@ -16,67 +16,60 @@ export async function POST(request: NextRequest) {
         }
 
         // AI生成済みの献立を取得（vesselIdがnullまたは一致するもの）
-        const menuPlans = await prisma.menuPlan.findMany({
-            where: {
-                OR: [
-                    { vesselId: vesselId },
-                    { vesselId: null }, // vesselIdが未設定のものも対象
-                ],
-                recipeLinks: {
-                    some: {}, // レシピが1つ以上リンクされている
-                },
-            },
-            include: {
-                recipeLinks: true,
-            },
-            orderBy: {
-                date: 'asc',
-            },
-        });
+        const supabase = await createSupabaseServerClient();
+        const { data: menuPlans, error } = await supabase
+            .from('MenuPlan')
+            .select('id,date,mealType,vesselId,recipeLinks:MenuPlanRecipe(id)')
+            .or(`vesselId.eq.${vesselId},vesselId.is.null`)
+            .order('date', { ascending: true });
+        if (error) {
+            throw error;
+        }
 
-        if (menuPlans.length === 0) {
+        const menuPlansWithRecipes = (menuPlans ?? []).filter(
+            (plan) => (plan.recipeLinks?.length ?? 0) > 0,
+        );
+
+        if (menuPlansWithRecipes.length === 0) {
             return NextResponse.json({
                 error: 'インポート可能な献立がありません。先に「献立＆調達」でAI生成してください。'
             }, { status: 404 });
         }
 
         // vesselIdがnullのMenuPlanにvesselIdを設定
-        const nullVesselPlans = menuPlans.filter(p => p.vesselId === null);
+        const nullVesselPlans = menuPlansWithRecipes.filter(p => p.vesselId === null);
         if (nullVesselPlans.length > 0) {
-            await prisma.menuPlan.updateMany({
-                where: {
-                    id: {
-                        in: nullVesselPlans.map(p => p.id),
-                    },
-                },
-                data: {
-                    vesselId,
-                },
-            });
+            const { error: updateError } = await supabase
+                .from('MenuPlan')
+                .update({ vesselId })
+                .in('id', nullVesselPlans.map(p => p.id));
+            if (updateError) {
+                throw updateError;
+            }
         }
 
         // 日付の範囲を取得
-        const dates = [...new Set(menuPlans.map(p => p.date))].sort();
+        const dates = [...new Set(menuPlansWithRecipes.map(p => p.date))].sort();
         const startDate = dates[0];
         const endDate = dates[dates.length - 1];
 
         // 統計情報を集計
         const mealCounts = {
-            breakfast: menuPlans.filter(p => p.mealType === 'breakfast').length,
-            lunch: menuPlans.filter(p => p.mealType === 'lunch').length,
-            dinner: menuPlans.filter(p => p.mealType === 'dinner').length,
+            breakfast: menuPlansWithRecipes.filter(p => p.mealType === 'breakfast').length,
+            lunch: menuPlansWithRecipes.filter(p => p.mealType === 'lunch').length,
+            dinner: menuPlansWithRecipes.filter(p => p.mealType === 'dinner').length,
         };
 
-        const totalRecipes = menuPlans.reduce((sum, p) => sum + p.recipeLinks.length, 0);
+        const totalRecipes = menuPlansWithRecipes.reduce((sum, p) => sum + (p.recipeLinks?.length ?? 0), 0);
 
         return NextResponse.json({
             success: true,
-            message: `${dates.length}日分の献立（${menuPlans.length}食）をカレンダーに追加しました`,
+            message: `${dates.length}日分の献立（${menuPlansWithRecipes.length}食）をカレンダーに追加しました`,
             details: {
                 startDate,
                 endDate,
                 totalDays: dates.length,
-                totalMeals: menuPlans.length,
+                totalMeals: menuPlansWithRecipes.length,
                 totalRecipes,
                 mealCounts,
             },

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
 import { MealType } from '@prisma/client';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function GET(request: Request) {
     try {
@@ -17,33 +17,35 @@ export async function GET(request: Request) {
         }
 
         // 今日のメニュープランを取得
-        const menuPlan = await prisma.menuPlan.findFirst({
-            where: {
-                vesselId,
-                date,
-                ...(mealType ? { mealType } : {}),
-            },
-            include: {
-                recipeLinks: {
-                    include: {
-                        recipe: true,
-                    },
-                },
-            },
-            orderBy: {
-                mealType: 'asc',
-            },
-        });
+        const supabase = await createSupabaseServerClient();
+        let query = supabase
+            .from('MenuPlan')
+            .select('id,date,mealType,recipeLinks:MenuPlanRecipe(recipe:Recipe(name,category))')
+            .eq('vesselId', vesselId)
+            .eq('date', date)
+            .order('mealType', { ascending: true });
+        if (mealType) {
+            query = query.eq('mealType', mealType);
+        }
+        const { data: menuPlan } = await query.maybeSingle();
 
         if (!menuPlan) {
             return NextResponse.json({ menuPlan: null });
         }
 
         // レシピ情報を構築
-        const recipes = menuPlan.recipeLinks.map((rl) => ({
-            name: rl.recipe.name,
-            category: rl.recipe.category,
-        }));
+        const recipes = (menuPlan.recipeLinks ?? [])
+            .map((rl) => rl.recipe)
+            .filter(Boolean)
+            .map((raw) => {
+                const recipe = Array.isArray(raw) ? raw[0] : raw;
+                if (!recipe) return null;
+                return {
+                    name: recipe.name,
+                    category: recipe.category,
+                };
+            })
+            .filter((r) => r !== null);
 
         const recipeNames = recipes.map((r) => r.name);
         const menuName = recipeNames.length > 0

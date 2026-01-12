@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ========================================
@@ -107,6 +107,7 @@ model User {
   name          String?
   passwordHash  String?
   role          UserRole @default(CHEF)
+  authUserId    String?  @unique
 
   // テナント紐付け
   company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -279,14 +280,6 @@ model MealFeedback {
   // 写真撮影機能用
   photoUrl      String?       // 撮影写真のURL
   reasonTags    String?       // 理由タグ（JSON配列）例: ["味", "量"]
-
-  // AI分析結果
-  aiAnalysisStatus   String?   // "pending" | "success" | "failed" | "skipped"
-  aiLeftoverPercent  Int?      // 推定残食割合 (0/25/50/75/100)
-  aiLeftoverLevel    String?   // "少" | "中" | "多" | "ほぼ全部"
-  aiConfidence       String?   // "low" | "medium" | "high"
-  aiNote             String?   // 注意メモ（暗い、皿が隠れてる等）
-  aiAnalyzedAt       DateTime? // 分析実行日時
 
   menuPlan      MenuPlan?      @relation(fields: [menuPlanId], references: [id], onDelete: Cascade)
   menuPlanId    String?

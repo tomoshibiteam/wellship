@@ -30,17 +30,25 @@ export interface DifyWorkflowInput {
     /** 調理時間上限（分）（任意） */
     cooking_time_limit?: number;
 
-    /** 禁止食材（カンマ区切り）（任意） */
-    banned_ingredients?: string;
+    /** 禁止食材（配列）（任意） */
+    banned_ingredients?: string[];
 
-    /** 曜日ルール（JSON文字列）（任意） */
-    weekday_rules?: string;
+    /** 曜日ルール（オブジェクト）（任意） */
+    weekday_rules?: Record<string, unknown>;
 
-    /** 使用可能レシピID（カンマ区切り）（任意） */
-    allowed_recipe_ids?: string;
+    /** 使用可能レシピID（配列）（任意） */
+    allowed_recipe_ids?: string[];
 
-    /** レシピマスタJSON文字列 */
-    recipes?: string;
+    /** レシピ候補（配列） */
+    recipes?: Array<{
+        id: string;
+        name: string;
+        category: string;
+        calories: number;
+        protein: number;
+        salt: number;
+        costPerServing: number;
+    }>;
 }
 
 // ============================================================================

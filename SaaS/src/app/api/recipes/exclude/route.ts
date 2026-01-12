@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/options';
+import { getCurrentUser } from '@/lib/auth/session';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const user = await getCurrentUser();
+    if (!user) {
+        return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -14,14 +13,14 @@ export async function POST(request: NextRequest) {
 
     if (!recipeId || !scope || !reason) {
         return NextResponse.json(
-            { error: 'recipeId, scope, and reason are required' },
+            { error: 'recipeId / scope / reason は必須です' },
             { status: 400 }
         );
     }
 
     if (!['CHEF', 'VESSEL'].includes(scope)) {
         return NextResponse.json(
-            { error: 'scope must be CHEF or VESSEL' },
+            { error: 'scope は CHEF または VESSEL である必要があります' },
             { status: 400 }
         );
     }
@@ -40,11 +39,11 @@ export async function POST(request: NextRequest) {
         };
 
         if (scope === 'CHEF') {
-            data.userId = session.user.id;
+            data.userId = user.id;
         } else if (scope === 'VESSEL') {
             if (!vesselId) {
                 return NextResponse.json(
-                    { error: 'vesselId is required for VESSEL scope' },
+                    { error: 'VESSELスコープでは vesselId が必要です' },
                     { status: 400 }
                 );
             }
@@ -52,19 +51,23 @@ export async function POST(request: NextRequest) {
         }
 
         // upsertで重複を防ぐ
-        const exclusion = await prisma.recipeExclusion.upsert({
-            where: scope === 'CHEF'
-                ? { recipeId_userId_scope: { recipeId, userId: session.user.id, scope: 'CHEF' } }
-                : { recipeId_vesselId_scope: { recipeId, vesselId, scope: 'VESSEL' } },
-            create: data,
-            update: { reason },
-        });
+        const supabase = await createSupabaseServerClient();
+        const conflictTarget = scope === 'CHEF' ? 'recipeId,userId,scope' : 'recipeId,vesselId,scope';
+        const { data: exclusion, error } = await supabase
+            .from('RecipeExclusion')
+            .upsert(data, { onConflict: conflictTarget })
+            .select('*')
+            .single();
+
+        if (error) {
+            throw error;
+        }
 
         return NextResponse.json({ success: true, exclusion });
     } catch (error) {
         console.error('Exclusion error:', error);
         return NextResponse.json(
-            { error: 'Failed to create exclusion' },
+            { error: '除外設定の作成に失敗しました' },
             { status: 500 }
         );
     }
@@ -72,25 +75,35 @@ export async function POST(request: NextRequest) {
 
 // 除外一覧取得
 export async function GET(request: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const user = await getCurrentUser();
+    if (!user) {
+        return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const vesselId = searchParams.get('vesselId');
 
     const whereConditions = [];
-    whereConditions.push({ userId: session.user.id, scope: 'CHEF' as const });
+    whereConditions.push({ userId: user.id, scope: 'CHEF' as const });
     if (vesselId) {
         whereConditions.push({ vesselId, scope: 'VESSEL' as const });
     }
 
-    const exclusions = await prisma.recipeExclusion.findMany({
-        where: { OR: whereConditions },
-        include: { recipe: true },
-        orderBy: { createdAt: 'desc' },
-    });
+    const supabase = await createSupabaseServerClient();
+    let query = supabase
+        .from('RecipeExclusion')
+        .select('id,recipeId,scope,reason,createdAt,recipe:Recipe(id,name,category)')
+        .order('createdAt', { ascending: false });
 
-    return NextResponse.json({ exclusions });
+    if (whereConditions.length === 2) {
+        query = query.or(
+            `and(userId.eq.${user.id},scope.eq.CHEF),and(vesselId.eq.${vesselId},scope.eq.VESSEL)`,
+        );
+    } else {
+        query = query.eq('userId', user.id).eq('scope', 'CHEF');
+    }
+
+    const { data: exclusions } = await query;
+
+    return NextResponse.json({ exclusions: exclusions ?? [] });
 }

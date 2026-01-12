@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
 import { MealType } from '@prisma/client';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 /**
  * GET /api/daily-menu/day-summary?vesselId=xxx&date=2024-12-15
@@ -17,33 +17,18 @@ export async function GET(request: NextRequest) {
         }
 
         // 1日の全食事を取得（vesselIdがnullまたは一致するもの）
-        const menuPlans = await prisma.menuPlan.findMany({
-            where: {
-                OR: [
-                    { vesselId },
-                    { vesselId: null },
-                ],
-                date,
-            },
-            include: {
-                recipeLinks: {
-                    include: {
-                        recipe: {
-                            include: {
-                                ingredients: {
-                                    include: {
-                                        ingredient: true,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-            orderBy: {
-                mealType: 'asc', // breakfast, dinner, lunch → alphabetical
-            },
-        });
+        const supabase = await createSupabaseServerClient();
+        const { data: menuPlans, error } = await supabase
+            .from('MenuPlan')
+            .select(
+                'date,mealType,recipeLinks:MenuPlanRecipe(recipe:Recipe(id,name,category,calories,protein,salt,costPerServing,ingredients:RecipeIngredient(amount,ingredient:Ingredient(id,name,unit,storageType))))',
+            )
+            .or(`vesselId.eq.${vesselId},vesselId.is.null`)
+            .eq('date', date)
+            .order('mealType', { ascending: true });
+        if (error) {
+            throw error;
+        }
 
         // mealTypeごとに整理
         const mealOrder: MealType[] = ['breakfast', 'lunch', 'dinner'];
@@ -53,8 +38,27 @@ export async function GET(request: NextRequest) {
             dinner: '夕食',
         };
 
+        type DaySummaryIngredient = {
+            id: string;
+            name: string;
+            amount: number;
+            unit: string;
+            storageType: string;
+        };
+
+        type DaySummaryRecipe = {
+            id: string;
+            name: string;
+            category: string;
+            calories: number;
+            protein: number;
+            salt: number;
+            costPerServing: number;
+            ingredients: DaySummaryIngredient[];
+        };
+
         const meals = mealOrder.map(mealType => {
-            const plan = menuPlans.find(p => p.mealType === mealType);
+            const plan = (menuPlans ?? []).find(p => p.mealType === mealType);
             if (!plan) {
                 return {
                     mealType,
@@ -67,22 +71,36 @@ export async function GET(request: NextRequest) {
                 };
             }
 
-            const recipes = plan.recipeLinks.map(link => ({
-                id: link.recipe.id,
-                name: link.recipe.name,
-                category: link.recipe.category,
-                calories: link.recipe.calories,
-                protein: link.recipe.protein,
-                salt: link.recipe.salt,
-                costPerServing: link.recipe.costPerServing,
-                ingredients: link.recipe.ingredients.map(ri => ({
-                    id: ri.ingredient.id,
-                    name: ri.ingredient.name,
-                    amount: ri.amount,
-                    unit: ri.ingredient.unit,
-                    storageType: ri.ingredient.storageType,
-                })),
-            }));
+            const recipes: DaySummaryRecipe[] = (plan.recipeLinks ?? [])
+                .map((link) => link.recipe)
+                .filter(Boolean)
+                .map((raw) => {
+                    const recipe = Array.isArray(raw) ? raw[0] : raw;
+                    if (!recipe) return null;
+                    return {
+                        id: recipe.id,
+                        name: recipe.name,
+                        category: recipe.category,
+                        calories: recipe.calories,
+                        protein: recipe.protein,
+                        salt: recipe.salt,
+                        costPerServing: recipe.costPerServing,
+                        ingredients: (recipe.ingredients ?? [])
+                            .map((ri) => {
+                                const ingredient = Array.isArray(ri.ingredient) ? ri.ingredient[0] : ri.ingredient;
+                                if (!ingredient) return null;
+                                return {
+                                    id: ingredient.id,
+                                    name: ingredient.name,
+                                    amount: ri.amount,
+                                    unit: ingredient.unit,
+                                    storageType: ingredient.storageType,
+                                };
+                            })
+                            .filter((ing): ing is DaySummaryIngredient => ing !== null),
+                    };
+                })
+                .filter((r): r is DaySummaryRecipe => r !== null);
 
             return {
                 mealType,

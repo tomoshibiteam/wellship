@@ -19,10 +19,16 @@ export interface MenuGenInput {
     season?: 'spring' | 'summer' | 'autumn' | 'winter';
     cookingTimeLimit?: number; // Maximum cooking time in minutes
     bannedIngredients?: string[]; // Ingredients to exclude (allergies etc.)
-    weekdayRules?: Record<string, string>; // Special rules per weekday
+    weekdayRules?: Record<string, unknown>; // Special rules per weekday
 
     // Advanced constraints (for sourcing feature)
     allowedRecipeIds?: string[]; // When sourcing constraints are enabled
+
+    // 司厨に提供するレシピ候補（Dify推奨：配列で渡す）
+    recipes?: RecipeInfo[];
+
+    // 互換性のため残置（旧：JSON文字列）
+    recipesJson?: string;
 }
 
 /**

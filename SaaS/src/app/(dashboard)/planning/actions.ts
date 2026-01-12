@@ -1,12 +1,14 @@
 "use server";
 
-import { prisma } from "@/lib/db/prisma";
 import { computeHealthScore } from "./health-score";
 import { MealType, RecipeCategory, Recipe } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { isGeminiConfigured, generateWithGeminiJSON } from "@/lib/ai/gemini";
 import { buildMenuGenerationPrompt, AIGeneratedMenu, validateMenuResponse, fixInvalidRecipeIds } from "@/lib/ai/prompts/menu";
 import { getCurrentUser } from "@/lib/auth/session";
+import { features } from "@/lib/config/features";
+import { DifyMenuGenerator } from "@/lib/ai/providers/dify";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type NutritionPolicy = "バランス重視" | "高たんぱく" | "塩分控えめ" | "ボリューム重視";
 
@@ -88,6 +90,77 @@ function policyToTargets(policy: NutritionPolicy) {
   }
 }
 
+function buildRecipeMasterJson(recipes: Recipe[]): string {
+  const payload = recipes.map((r) => ({
+    id: r.id,
+    name: r.name,
+    category: r.category,
+    calories: r.calories,
+    protein: r.protein,
+    salt: r.salt,
+    costPerServing: r.costPerServing,
+  }));
+  return JSON.stringify(payload, null, 1);
+}
+
+function normalizeMenuOutput(menu: AIGeneratedMenu, recipes: Recipe[]): AIGeneratedMenu {
+  const validIds = new Set(recipes.map((r) => r.id));
+  const nameToId = new Map(recipes.map((r) => [r.name, r.id]));
+  const recipeMap = new Map(recipes.map((r) => [r.id, { id: r.id, category: r.category }]));
+
+  if (!validateMenuResponse(menu, validIds)) {
+    throw new Error("AI response structure invalid");
+  }
+
+  const mapIds = (ids: string[]) =>
+    ids.map((raw) => (validIds.has(raw) ? raw : nameToId.get(raw) ?? raw));
+
+  const normalized: AIGeneratedMenu = {
+    days: menu.days.map((day) => ({
+      date: day.date,
+      dayLabel: day.dayLabel,
+      breakfast: mapIds(day.breakfast),
+      lunch: mapIds(day.lunch),
+      dinner: mapIds(day.dinner),
+    })),
+  };
+
+  return fixInvalidRecipeIds(normalized, validIds, recipeMap);
+}
+
+function mapMenuToGeneratedDays(menu: AIGeneratedMenu, recipes: Recipe[]): GeneratedDay[] {
+  const fullRecipeMap = new Map(recipes.map((r) => [r.id, r]));
+  return menu.days.map((day, idx) => {
+    const meals: GeneratedDay["meals"] = {
+      breakfast: day.breakfast.map((id) => fullRecipeMap.get(id)!).filter(Boolean),
+      lunch: day.lunch.map((id) => fullRecipeMap.get(id)!).filter(Boolean),
+      dinner: day.dinner.map((id) => fullRecipeMap.get(id)!).filter(Boolean),
+    };
+
+    const totals = Object.values(meals).flat().reduce(
+      (acc, r) => {
+        acc.calories += r.calories;
+        acc.protein += r.protein;
+        acc.salt += r.salt;
+        acc.cost += r.costPerServing;
+        return acc;
+      },
+      { calories: 0, protein: 0, salt: 0, cost: 0 }
+    );
+
+    const healthScore = computeHealthScore(totals.calories, totals.protein, totals.salt);
+
+    return {
+      day: idx + 1,
+      date: day.date,
+      dayLabel: day.dayLabel,
+      meals,
+      totals,
+      healthScore,
+    };
+  });
+}
+
 // AIによる献立生成
 async function generateMenuWithAI(
   recipes: Recipe[],
@@ -125,49 +198,8 @@ async function generateMenuWithAI(
     });
 
     const aiResponse = await generateWithGeminiJSON<AIGeneratedMenu>(prompt);
-
-    // レシピIDの検証
-    const validIds = new Set(recipes.map(r => r.id));
-    if (!validateMenuResponse(aiResponse, validIds)) {
-      console.warn("AI response structure invalid, using fallback");
-      return null;
-    }
-
-    // 無効なレシピIDを自動修正
-    const recipeMap = new Map(recipes.map(r => [r.id, { id: r.id, category: r.category }]));
-    const fixedResponse = fixInvalidRecipeIds(aiResponse, validIds, recipeMap);
-
-    // AIレスポンスをGeneratedDay形式に変換
-    const fullRecipeMap = new Map(recipes.map(r => [r.id, r]));
-    const generated: GeneratedDay[] = fixedResponse.days.map((day, idx) => {
-      const meals: GeneratedDay["meals"] = {
-        breakfast: day.breakfast.map(id => fullRecipeMap.get(id)!).filter(Boolean),
-        lunch: day.lunch.map(id => fullRecipeMap.get(id)!).filter(Boolean),
-        dinner: day.dinner.map(id => fullRecipeMap.get(id)!).filter(Boolean),
-      };
-
-      const totals = Object.values(meals).flat().reduce(
-        (acc, r) => {
-          acc.calories += r.calories;
-          acc.protein += r.protein;
-          acc.salt += r.salt;
-          acc.cost += r.costPerServing;
-          return acc;
-        },
-        { calories: 0, protein: 0, salt: 0, cost: 0 }
-      );
-
-      const healthScore = computeHealthScore(totals.calories, totals.protein, totals.salt);
-
-      return {
-        day: idx + 1,
-        date: day.date,
-        dayLabel: day.dayLabel,
-        meals,
-        totals,
-        healthScore,
-      };
-    });
+    const fixedResponse = normalizeMenuOutput(aiResponse, recipes);
+    const generated = mapMenuToGeneratedDays(fixedResponse, recipes);
 
     // 予算オーバーの日を修正 → 期間全体で予算内なら日ごとの変動はOK
     // enforceBudget削除済み - 予算サマリーはUIで表示
@@ -178,6 +210,44 @@ async function generateMenuWithAI(
     console.error("Gemini menu generation error:", error);
     return null;
   }
+}
+
+// Difyによる献立生成
+async function generateMenuWithDify(
+  recipes: Recipe[],
+  days: number,
+  crewCount: number,
+  dailyBudget: number,
+  minBudgetUsagePercent: number,
+  startDate: string,
+  constraints?: MenuConstraints
+): Promise<GeneratedDay[]> {
+  const generator = new DifyMenuGenerator();
+
+  const output = await generator.generate({
+    crewCount,
+    days,
+    budgetPerPersonPerDay: dailyBudget,
+    minBudgetUsagePercent,
+    startDate,
+    season: constraints?.season,
+    cookingTimeLimit: constraints?.maxCookingTimeMinutes,
+    bannedIngredients: constraints?.excludeIngredients,
+    weekdayRules: constraints?.dayRules,
+    allowedRecipeIds: [],
+    recipes: recipes.map((r) => ({
+      id: r.id,
+      name: r.name,
+      category: r.category,
+      calories: r.calories,
+      protein: r.protein,
+      salt: r.salt,
+      costPerServing: r.costPerServing,
+    })),
+  });
+
+  const fixedResponse = normalizeMenuOutput(output as AIGeneratedMenu, recipes);
+  return mapMenuToGeneratedDays(fixedResponse, recipes);
 }
 
 // 期間全体の予算を最低〜最大の範囲に収める
@@ -401,8 +471,12 @@ function generateMenuFallback(
 }
 
 export async function generateMenuPlan(input: GenerateRequest): Promise<GeneratedDay[]> {
+  const supabase = await createSupabaseServerClient();
   const days = Math.max(1, input.days || 1);
   const user = await getCurrentUser();
+  if (!user) {
+    throw new Error("認証が必要です。");
+  }
   const userId = user?.id;
   const vesselId = user?.vesselIds?.[0]; // 最初の船を対象とする
 
@@ -422,30 +496,101 @@ export async function generateMenuPlan(input: GenerateRequest): Promise<Generate
   //   excludeIds = exclusions.map(e => e.recipeId);
   // }
 
-  // レシピと食材情報を取得して食材原価を計算
-  const allRecipesRaw = await prisma.recipe.findMany({
-    include: {
-      ingredients: {
-        include: {
-          ingredient: true,
-        },
-      },
-    },
-  });
+  // 会社内レシピ（Published）を取得して、司厨セット（恒久参照） + 会社強制（override）で最終参照を決める
+  const { data: allRecipesRaw, error: recipesError } = await supabase
+    .from("Recipe")
+    .select(
+      "id,name,category,calories,protein,salt,costPerServing,source,status,referenceEnabled,ingredients:RecipeIngredient(amount,ingredient:Ingredient(costPerUnit))",
+    )
+    .eq("companyId", user.companyId)
+    .eq("source", "my")
+    .eq("status", "published");
+
+  if (recipesError || !allRecipesRaw) {
+    throw new Error("レシピの取得に失敗しました。");
+  }
+
+  const recipeIds = allRecipesRaw.map((r) => r.id);
+
+  const isMissingTable = (err: unknown) =>
+    typeof err === "object" &&
+    err !== null &&
+    ("code" in err || "message" in err) &&
+    // @ts-expect-error - Supabase error shape
+    (err.code === "PGRST205" || /Could not find the table/i.test(err.message ?? ""));
+
+  let useLegacyReferenceEnabled = false;
+
+  const { data: chefRefs, error: chefRefError } = await supabase
+    .from("ChefRecipeReference")
+    .select("recipeId,enabled")
+    .eq("userId", user.id)
+    .in("recipeId", recipeIds);
+  if (chefRefError) {
+    if (isMissingTable(chefRefError)) {
+      useLegacyReferenceEnabled = true;
+    } else {
+      throw new Error("司厨セット（参照）の取得に失敗しました。");
+    }
+  }
+
+  const { data: overrideRefs, error: overrideError } = await supabase
+    .from("ChefRecipeReferenceOverride")
+    .select("recipeId,enabled")
+    .eq("userId", user.id)
+    .in("recipeId", recipeIds);
+  if (overrideError) {
+    if (isMissingTable(overrideError)) {
+      useLegacyReferenceEnabled = true;
+    } else {
+      throw new Error("会社強制（参照）の取得に失敗しました。");
+    }
+  }
+
+  const chefMap = new Map<string, boolean>(
+    (chefRefs ?? []).map((r) => [r.recipeId, Boolean(r.enabled)]),
+  );
+  const overrideMap = new Map<string, boolean>(
+    (overrideRefs ?? []).map((r) => [r.recipeId, Boolean(r.enabled)]),
+  );
 
   // 食材リンクがあるレシピのみをフィルタリングし、食材原価を計算
   const allRecipes = allRecipesRaw
-    .filter(recipe => recipe.ingredients.length > 0) // 食材リンクがないレシピは除外
-    .map(recipe => {
-      const ingredientCost = recipe.ingredients.reduce((sum, ri) => {
-        return sum + (ri.amount * ri.ingredient.costPerUnit);
+    .filter(recipe => (recipe.ingredients ?? []).length > 0) // 食材リンクがないレシピは除外
+    .filter((recipe) => {
+      if (useLegacyReferenceEnabled) {
+        return Boolean(recipe.referenceEnabled);
+      }
+      const chefEnabled = chefMap.get(recipe.id) ?? false;
+      const overrideEnabled = overrideMap.has(recipe.id)
+        ? overrideMap.get(recipe.id) ?? false
+        : null;
+      const effectiveEnabled =
+        overrideEnabled === null ? chefEnabled : overrideEnabled;
+      return effectiveEnabled;
+    })
+    .map((recipe) => {
+      if (!recipe.name || !recipe.category) return null;
+      const ingredientCost = (recipe.ingredients ?? []).reduce((sum, ri) => {
+        const ingredient = Array.isArray(ri.ingredient) ? ri.ingredient[0] : ri.ingredient;
+        return sum + (ri.amount * (ingredient?.costPerUnit ?? 0));
       }, 0);
-      return {
-        ...recipe,
-        costPerServing: ingredientCost, // 食材原価を使用
-        ingredients: undefined, // 不要なデータを除去
-      } as Recipe;
-    });
+      const now = new Date();
+      const mapped: Recipe = {
+        id: recipe.id,
+        name: recipe.name,
+        category: recipe.category as RecipeCategory,
+        calories: Number(recipe.calories ?? 0),
+        protein: Number(recipe.protein ?? 0),
+        salt: Number(recipe.salt ?? 0),
+        costPerServing: ingredientCost,
+        companyId: user.companyId,
+        createdAt: now,
+        updatedAt: now,
+      };
+      return mapped;
+    })
+    .filter((recipe): recipe is Recipe => Boolean(recipe));
 
   console.log(`📊 食材リンクありのレシピ数: ${allRecipes.length}件（全${allRecipesRaw.length}件）`);
 
@@ -471,17 +616,48 @@ export async function generateMenuPlan(input: GenerateRequest): Promise<Generate
   const targetDates = Array.from({ length: days }, (_v, idx) => formatDate(baseDate, idx));
 
   // 古い献立を削除
-  await prisma.menuPlan.deleteMany({
-    where: {
-      date: { notIn: targetDates },
-    },
-  });
+  if (targetDates.length > 0) {
+    const dateList = targetDates.map((d) => `"${d}"`).join(",");
+    await supabase.from("MenuPlan").delete().not("date", "in", `(${dateList})`);
+  }
 
-  // まずAI生成を試み、失敗したらフォールバック
-  let generated = await generateMenuWithAI(recipes, days, input.crewCount, input.budget, minBudgetUsagePercent, input.policy, startDate);
+  let generated: GeneratedDay[] | null = null;
+
+  if (features.aiProvider === "dify") {
+    try {
+      generated = await generateMenuWithDify(
+        recipes,
+        days,
+        input.crewCount,
+        input.budget,
+        minBudgetUsagePercent,
+        startDate,
+        input.constraints
+      );
+    } catch (error) {
+      console.error("Dify menu generation error:", error);
+      throw new Error("Dify献立生成に失敗しました。");
+    }
+  } else {
+    // まずGemini生成を試み、失敗したらフォールバック
+    generated = await generateMenuWithAI(
+      recipes,
+      days,
+      input.crewCount,
+      input.budget,
+      minBudgetUsagePercent,
+      input.policy,
+      startDate,
+      input.constraints
+    );
+
+    if (!generated) {
+      generated = generateMenuFallback(recipes, days, input.policy, input.budget);
+    }
+  }
 
   if (!generated) {
-    generated = generateMenuFallback(recipes, days, input.policy, input.budget);
+    throw new Error("献立生成に失敗しました。");
   }
 
   // 期間全体の予算を強制（超過している場合は高コストレシピを差し替え）
@@ -493,31 +669,28 @@ export async function generateMenuPlan(input: GenerateRequest): Promise<Generate
     for (const mealType of mealOrder) {
       const recipesForMeal = day.meals[mealType];
       const id = `plan-${day.date}-${mealType}`;
-      await prisma.menuPlan.upsert({
-        where: { id },
-        update: {
-          date: day.date,
-          mealType,
-          healthScore: day.healthScore,
-          crewCount: input.crewCount,
-          budgetPerPerson: input.budget,
-          recipeLinks: {
-            deleteMany: {},
-            create: recipesForMeal.map((r) => ({ recipeId: r.id })),
-          },
-        },
-        create: {
+      await supabase.from("MenuPlan").upsert(
+        {
           id,
           date: day.date,
           mealType,
           healthScore: day.healthScore,
           crewCount: input.crewCount,
           budgetPerPerson: input.budget,
-          recipeLinks: {
-            create: recipesForMeal.map((r) => ({ recipeId: r.id })),
-          },
+          vesselId: vesselId ?? null,
         },
-      });
+        { onConflict: "id" },
+      );
+
+      await supabase.from("MenuPlanRecipe").delete().eq("menuPlanId", id);
+      if (recipesForMeal.length > 0) {
+        await supabase.from("MenuPlanRecipe").insert(
+          recipesForMeal.map((r) => ({
+            menuPlanId: id,
+            recipeId: r.id,
+          })),
+        );
+      }
     }
   }
 
@@ -530,57 +703,54 @@ export async function swapMenuRecipe(params: {
   oldRecipeId: string;
   newRecipeId: string;
 }) {
+  const supabase = await createSupabaseServerClient();
   const id = `plan-${params.date}-${params.mealType}`;
 
-  await prisma.menuPlan.upsert({
-    where: { id },
-    update: {
-      date: params.date,
-      mealType: params.mealType,
-      recipeLinks: {
-        deleteMany: { recipeId: params.oldRecipeId },
-        create: [{ recipeId: params.newRecipeId }],
-      },
-    },
-    create: {
+  await supabase.from("MenuPlan").upsert(
+    {
       id,
       date: params.date,
       mealType: params.mealType,
       healthScore: 0,
-      recipeLinks: {
-        create: [{ recipeId: params.newRecipeId }],
-      },
     },
+    { onConflict: "id" },
+  );
+
+  await supabase
+    .from("MenuPlanRecipe")
+    .delete()
+    .eq("menuPlanId", id)
+    .eq("recipeId", params.oldRecipeId);
+
+  await supabase.from("MenuPlanRecipe").insert({
+    menuPlanId: id,
+    recipeId: params.newRecipeId,
   });
 
   revalidatePath("/planning");
 }
 
 export async function loadExistingPlan(days: number = 30): Promise<GeneratedDay[] | null> {
-  const plans = await prisma.menuPlan.findMany({
-    include: {
-      recipeLinks: {
-        include: {
-          recipe: {
-            include: {
-              ingredients: {
-                include: {
-                  ingredient: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-    orderBy: [{ date: "asc" }, { mealType: "asc" }],
-  });
+  const supabase = await createSupabaseServerClient();
+  const { data: plans, error } = await supabase
+    .from("MenuPlan")
+    .select(
+      "id,date,mealType,healthScore,recipeLinks:MenuPlanRecipe(recipe:Recipe(id,name,category,calories,protein,salt,costPerServing,ingredients:RecipeIngredient(amount,ingredient:Ingredient(costPerUnit))))",
+    )
+    .order("date", { ascending: true })
+    .order("mealType", { ascending: true });
 
-  if (!plans.length) return null;
+  if (error || !plans || plans.length === 0) return null;
 
   // レシピの食材原価を計算する関数
-  const calcIngredientCost = (recipe: { ingredients: { amount: number; ingredient: { costPerUnit: number } }[] }) => {
-    return recipe.ingredients.reduce((sum, ri) => sum + (ri.amount * ri.ingredient.costPerUnit), 0);
+  const calcIngredientCost = (recipe: any) => {
+    const list = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
+    return list.reduce((sum: number, ri: any) => {
+      const ingredient = Array.isArray(ri?.ingredient) ? ri.ingredient[0] : ri.ingredient;
+      const amount = Number(ri?.amount ?? 0);
+      const costPerUnit = Number(ingredient?.costPerUnit ?? 0);
+      return sum + amount * costPerUnit;
+    }, 0);
   };
 
   const grouped = new Map<string, { date: string; meals: Partial<Record<MealType, Recipe[]>> }>();
@@ -588,15 +758,31 @@ export async function loadExistingPlan(days: number = 30): Promise<GeneratedDay[
     const key = plan.date;
     if (!grouped.has(key)) grouped.set(key, { date: plan.date, meals: {} });
     const entry = grouped.get(key)!;
+    const mealType = plan.mealType as MealType;
     // 食材原価を計算してcostPerServingに設定（食材データがなければ既存値を使用）
-    entry.meals[plan.mealType] = plan.recipeLinks.map((rl) => {
-      const ingredientCost = calcIngredientCost(rl.recipe);
-      return {
-        ...rl.recipe,
-        costPerServing: ingredientCost > 0 ? ingredientCost : rl.recipe.costPerServing,
-        ingredients: undefined, // 不要なデータを除去
-      } as Recipe;
-    });
+    const recipeLinks = plan.recipeLinks || [];
+    entry.meals[mealType] = recipeLinks
+      .map((rl) => rl.recipe)
+      .filter(Boolean)
+      .map((recipe) => {
+        const resolved = Array.isArray(recipe) ? recipe[0] : recipe;
+        if (!resolved) return null;
+        const ingredientCost = calcIngredientCost(resolved);
+        const now = new Date();
+        return {
+          id: resolved.id,
+          name: resolved.name,
+          category: resolved.category as RecipeCategory,
+          calories: Number(resolved.calories ?? 0),
+          protein: Number(resolved.protein ?? 0),
+          salt: Number(resolved.salt ?? 0),
+          costPerServing: ingredientCost > 0 ? ingredientCost : resolved.costPerServing,
+          companyId: null,
+          createdAt: now,
+          updatedAt: now,
+        } as Recipe;
+      })
+      .filter((r): r is Recipe => Boolean(r));
   }
 
   const sortedDates = Array.from(grouped.keys()).sort();
@@ -647,10 +833,14 @@ export async function loadExistingPlan(days: number = 30): Promise<GeneratedDay[
 
 // 最新の献立日付範囲を取得するユーティリティ。
 export async function getLatestPlanRange() {
-  const dates = await prisma.menuPlan.findMany({
-    select: { date: true },
-    orderBy: { date: "asc" },
-  });
+  const supabase = await createSupabaseServerClient();
+  const { data: dates, error } = await supabase
+    .from("MenuPlan")
+    .select("date")
+    .order("date", { ascending: true });
+
+  if (error || !dates) return null;
+
   const uniqueDates = Array.from(new Set(dates.map((d) => d.date))).sort();
   if (!uniqueDates.length) return null;
   return {
@@ -673,11 +863,9 @@ export async function trimMenuPlanDays(effectiveDays: number): Promise<Generated
   }
 
   const targetDates = range.dates.slice(0, Math.min(effectiveDays, range.days));
-  await prisma.menuPlan.deleteMany({
-    where: {
-      date: { notIn: targetDates },
-    },
-  });
+  const supabase = await createSupabaseServerClient();
+  const dateList = targetDates.map((d) => `"${d}"`).join(",");
+  await supabase.from("MenuPlan").delete().not("date", "in", `(${dateList})`);
 
   // 削除後の最新状態を再読込して返す
   return loadExistingPlan(targetDates.length);

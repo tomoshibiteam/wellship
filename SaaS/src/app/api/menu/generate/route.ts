@@ -9,6 +9,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ plan });
   } catch (error) {
     console.error("generate error", error);
-    return NextResponse.json({ error: "Failed to generate menu plan" }, { status: 500 });
+    const message =
+      error instanceof Error ? error.message : "献立生成に失敗しました";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -1,16 +1,21 @@
 import { PageHeader } from "@/components/page-header";
 import SummaryClient from "./summary-client";
-import { prisma } from "@/lib/db/prisma";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 async function loadDefaultRange() {
-  const latest = await prisma.mealFeedback.findFirst({
-    orderBy: { date: "desc" },
-    select: { date: true },
-  });
-  const earliest = await prisma.mealFeedback.findFirst({
-    orderBy: { date: "asc" },
-    select: { date: true },
-  });
+  const supabase = await createSupabaseServerClient();
+  const { data: latest } = await supabase
+    .from("MealFeedback")
+    .select("date")
+    .order("date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const { data: earliest } = await supabase
+    .from("MealFeedback")
+    .select("date")
+    .order("date", { ascending: true })
+    .limit(1)
+    .maybeSingle();
   if (!latest?.date) {
     const today = new Date().toISOString().slice(0, 10);
     return { startDate: today, endDate: today };

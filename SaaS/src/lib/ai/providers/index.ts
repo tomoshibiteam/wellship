@@ -40,7 +40,10 @@ export function isAIProviderAvailable(): boolean {
 
     try {
         if (provider === 'dify') {
-            return !!(process.env.DIFY_API_KEY && process.env.DIFY_WORKFLOW_URL);
+            return !!(
+                process.env.DIFY_API_KEY &&
+                (process.env.DIFY_WORKFLOW_URL || process.env.DIFY_BASE_URL)
+            );
         }
         if (provider === 'gemini') {
             return !!process.env.GEMINI_API_KEY;

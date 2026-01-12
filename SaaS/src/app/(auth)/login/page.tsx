@@ -1,39 +1,88 @@
 'use client';
 
-import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
-function LoginForm() {
+type AuthMode = 'login' | 'signup';
+
+function AuthForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const callbackUrl = searchParams.get('callbackUrl') || '/planning';
+    const callbackUrlParam = searchParams.get('callbackUrl');
+    const callbackUrl = callbackUrlParam || '/planning';
 
+    const [mode, setMode] = useState<AuthMode>('login');
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [notice, setNotice] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setNotice('');
         setIsLoading(true);
 
         try {
-            const result = await signIn('credentials', {
-                email,
-                password,
-                redirect: false,
-            });
+            const supabase = createSupabaseBrowserClient();
+            if (mode === 'login') {
+                const { error: authError } = await supabase.auth.signInWithPassword({
+                    email,
+                    password,
+                });
 
-            if (result?.error) {
-                setError('メールアドレスまたはパスワードが正しくありません');
-            } else {
-                router.push(callbackUrl);
+                if (authError) {
+                    setError('メールアドレスまたはパスワードが正しくありません');
+                    return;
+                }
+
+                let targetUrl = callbackUrl;
+                if (!callbackUrlParam) {
+                    try {
+                        const res = await fetch('/api/me');
+                        if (res.ok) {
+                            const json = await res.json();
+                            if (json?.user?.role === 'MANAGER') {
+                                targetUrl = '/manager/dashboard?scope=all&range=7d';
+                            }
+                        }
+                    } catch {
+                        // ignore and fallback
+                    }
+                }
+
+                router.push(targetUrl);
                 router.refresh();
+            } else {
+                const emailRedirectTo = `${window.location.origin}/login`;
+                const { data, error: authError } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        emailRedirectTo,
+                        data: { name: name.trim() || null },
+                    },
+                });
+
+                if (authError) {
+                    setError(authError.message || '新規登録に失敗しました');
+                    return;
+                }
+
+                if (data.session) {
+                    router.push(callbackUrl);
+                    router.refresh();
+                    return;
+                }
+
+                setNotice('登録しました。メール確認後にログインしてください。');
+                setMode('login');
             }
         } catch {
-            setError('ログインに失敗しました');
+            setError('認証に失敗しました');
         } finally {
             setIsLoading(false);
         }
@@ -41,15 +90,69 @@ function LoginForm() {
 
     return (
         <>
-            {/* Error Message */}
+            <div className="mb-6 flex rounded-xl bg-slate-100 p-1 text-sm">
+                <button
+                    type="button"
+                    onClick={() => {
+                        setMode('login');
+                        setError('');
+                        setNotice('');
+                    }}
+                    className={`flex-1 rounded-lg px-3 py-2 font-semibold transition ${mode === 'login'
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                        }`}
+                >
+                    ログイン
+                </button>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setMode('signup');
+                        setError('');
+                        setNotice('');
+                    }}
+                    className={`flex-1 rounded-lg px-3 py-2 font-semibold transition ${mode === 'signup'
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                        }`}
+                >
+                    新規登録
+                </button>
+            </div>
+
+            {/* Error/Notice Message */}
             {error && (
                 <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
                     {error}
                 </div>
             )}
+            {notice && (
+                <div className="mb-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">
+                    {notice}
+                </div>
+            )}
 
-            {/* Login Form */}
+            {/* Auth Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
+                {mode === 'signup' && (
+                    <div>
+                        <label
+                            htmlFor="name"
+                            className="mb-1.5 block text-sm font-medium text-slate-700"
+                        >
+                            お名前（任意）
+                        </label>
+                        <input
+                            id="name"
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-black transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                            placeholder="山田 太郎"
+                        />
+                    </div>
+                )}
                 <div>
                     <label
                         htmlFor="email"
@@ -81,6 +184,7 @@ function LoginForm() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
+                        minLength={6}
                         className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-black transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
                         placeholder="••••••••"
                     />
@@ -91,7 +195,13 @@ function LoginForm() {
                     disabled={isLoading}
                     className="w-full rounded-lg bg-gradient-to-r from-sky-600 to-teal-500 px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:from-sky-700 hover:to-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                    {isLoading ? 'ログイン中...' : 'ログイン'}
+                    {isLoading
+                        ? mode === 'login'
+                            ? 'ログイン中...'
+                            : '登録中...'
+                        : mode === 'login'
+                            ? 'ログイン'
+                            : '新規登録'}
                 </button>
             </form>
         </>
@@ -108,8 +218,6 @@ function LoginFormFallback() {
     );
 }
 
-import { Suspense } from 'react';
-
 export default function LoginPage() {
     return (
         <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-sky-50 via-white to-teal-50">
@@ -125,28 +233,8 @@ export default function LoginPage() {
                     </div>
 
                     <Suspense fallback={<LoginFormFallback />}>
-                        <LoginForm />
+                        <AuthForm />
                     </Suspense>
-
-                    {/* Demo Accounts */}
-                    <div className="mt-8 border-t border-slate-100 pt-6">
-                        <p className="mb-3 text-center text-xs font-medium uppercase tracking-wider text-slate-500">
-                            デモアカウント
-                        </p>
-                        <div className="space-y-2 text-xs text-slate-600">
-                            <div className="flex justify-between rounded-lg bg-slate-50 px-3 py-2">
-                                <span className="font-medium">現場側(司厨):</span>
-                                <span>chef@demo.wellship.jp</span>
-                            </div>
-                            <div className="flex justify-between rounded-lg bg-slate-50 px-3 py-2">
-                                <span className="font-medium">管理側(本部):</span>
-                                <span>manager@demo.wellship.jp</span>
-                            </div>
-                            <p className="mt-2 text-center text-slate-500">
-                                パスワード: <code className="rounded bg-slate-100 px-1.5 py-0.5">demo1234</code>
-                            </p>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

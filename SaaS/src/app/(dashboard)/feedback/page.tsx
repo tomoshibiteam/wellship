@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth/session";
-import { prisma } from "@/lib/db/prisma";
 import { redirect } from "next/navigation";
 import { DashboardFeedbackClient } from "@/components/dashboard-feedback-client";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function FeedbackPage() {
     const user = await getCurrentUser();
@@ -11,10 +11,12 @@ export default async function FeedbackPage() {
     }
 
     // 司厨が担当する船舶を取得（最初の船舶を自動選択）
-    const membership = await prisma.userVesselMembership.findFirst({
-        where: { userId: user.id },
-        include: { vessel: true },
-    });
+    const supabase = await createSupabaseServerClient();
+    const { data: membership } = await supabase
+        .from("UserVesselMembership")
+        .select("vessel:Vessel(id,name)")
+        .eq("userId", user.id)
+        .maybeSingle();
 
     if (!membership) {
         return (
@@ -28,14 +30,16 @@ export default async function FeedbackPage() {
         );
     }
 
-    const vessel = membership.vessel;
+    const vessel = Array.isArray(membership.vessel)
+        ? membership.vessel[0]
+        : membership.vessel;
 
     return (
         <div className="flex h-full items-center justify-center p-4">
             <div className="w-full max-w-xl rounded-2xl border border-sky-100 bg-white/90 p-6 shadow-[0_8px_24px_rgba(14,94,156,0.06)]">
                 <DashboardFeedbackClient
-                    vesselId={vessel.id}
-                    vesselName={vessel.name}
+                    vesselId={vessel?.id ?? ""}
+                    vesselName={vessel?.name ?? ""}
                 />
             </div>
         </div>

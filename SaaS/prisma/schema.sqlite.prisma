@@ -1,0 +1,350 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/sqlite-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// ========================================
+// Enums
+// ========================================
+
+enum StorageType {
+  frozen
+  chilled
+  room
+}
+
+enum RecipeCategory {
+  main
+  side
+  soup
+  dessert
+}
+
+enum MealType {
+  breakfast
+  lunch
+  dinner
+}
+
+enum VolumeFeeling {
+  less
+  just
+  much
+}
+
+enum LeftoverAmount {
+  none
+  half
+  almostAll
+}
+
+enum UserRole {
+  CHEF
+  MANAGER
+}
+
+enum ExclusionScope {
+  CHEF    // 司厨個人が作れない
+  VESSEL  // 船の環境で作れない
+}
+
+// ========================================
+// 認証・テナント関連（新規追加）
+// ========================================
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+
+  // リレーション
+  vessels   Vessel[]
+  users     User[]
+  ingredients Ingredient[]
+  recipes   Recipe[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Vessel {
+  id        String  @id @default(cuid())
+  name      String
+  imoNumber String?
+
+  // 予算設定 (船会社が設定)
+  minBudgetUsagePercent Int @default(90) // 予算消化率の下限（%）デフォルト90%
+
+  // 献立生成デフォルト設定 (司厨が設定)
+  defaultSeason         String?  // spring/summer/autumn/winter
+  defaultMaxCookingTime Int?     // 調理時間上限（分）
+
+  // テナント紐付け
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String
+
+  // リレーション
+  memberships UserVesselMembership[]
+  menuPlans   MenuPlan[]
+  feedbacks   MealFeedback[]
+  procurementAdjustments ProcurementAdjustment[]
+  crewMembers CrewMember[]
+  recipeExclusions RecipeExclusion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  passwordHash  String?
+  role          UserRole @default(CHEF)
+
+  // テナント紐付け
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId     String
+
+  // 船との紐付け
+  vesselMemberships UserVesselMembership[]
+
+  // レシピ除外
+  recipeExclusions RecipeExclusion[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([role])
+}
+
+model UserVesselMembership {
+  id       String    @id @default(cuid())
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  vessel   Vessel    @relation(fields: [vesselId], references: [id], onDelete: Cascade)
+  vesselId String
+  role     UserRole?
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, vesselId])
+  @@index([vesselId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  vesselId     String?
+
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ========================================
+// 既存モデル（companyId / vesselId 追加）
+// ========================================
+
+model Ingredient {
+  id                String             @id @default(cuid())
+  name              String
+  storageType       StorageType
+  unit              String
+  costPerUnit       Float              @default(0)
+
+  // テナント紐付け
+  company           Company?           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId         String?
+
+  recipeIngredients RecipeIngredient[]
+  procurementAdjustments ProcurementAdjustment[]
+
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([companyId])
+}
+
+model ProcurementAdjustment {
+  id            String     @id @default(cuid())
+  ingredient    Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  ingredientId  String
+  startDate     String
+  endDate       String
+  plannedAmount Float
+  orderAmount   Float
+  inStock       Boolean    @default(false)
+  unitPrice     Float
+
+  // テナント紐付け
+  vessel        Vessel?    @relation(fields: [vesselId], references: [id], onDelete: Cascade)
+  vesselId      String?
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@unique([ingredientId, startDate, endDate])
+  @@index([vesselId])
+}
+
+model Recipe {
+  id                String             @id @default(cuid())
+  name              String
+  category          RecipeCategory
+  calories          Float
+  protein           Float
+  salt              Float
+  costPerServing    Float
+
+  // テナント紐付け
+  company           Company?           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId         String?
+
+  ingredients       RecipeIngredient[]
+  menuPlans         MenuPlanRecipe[]
+  exclusions        RecipeExclusion[]
+
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([companyId])
+}
+
+model RecipeIngredient {
+  id           String     @id @default(cuid())
+  amount       Float
+  recipe       Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId     String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  ingredientId String
+
+  @@unique([recipeId, ingredientId])
+}
+
+model MenuPlan {
+  id          String            @id @default(cuid())
+  date        String
+  mealType    MealType
+  healthScore Float
+  crewCount   Int               @default(20) // 乗船人数（調達計算用）
+  budgetPerPerson Int           @default(1200) // 1人1日あたり予算（円）
+
+  // フィードバック締め状態
+  isClosed    Boolean           @default(false)
+  closedAt    DateTime?
+
+  // テナント紐付け
+  vessel      Vessel?           @relation(fields: [vesselId], references: [id], onDelete: Cascade)
+  vesselId    String?
+
+  recipeLinks MenuPlanRecipe[]
+  feedbacks   MealFeedback[]
+
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([vesselId, date, mealType])
+  @@index([vesselId])
+}
+
+model MenuPlanRecipe {
+  id          String   @id @default(cuid())
+  menuPlan    MenuPlan @relation(fields: [menuPlanId], references: [id], onDelete: Cascade)
+  menuPlanId  String
+  recipe      Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId    String
+
+  @@unique([menuPlanId, recipeId])
+}
+
+model MealFeedback {
+  id            String        @id @default(cuid())
+  date          String
+  mealType      MealType
+  satisfaction  Int
+  volumeFeeling VolumeFeeling
+  leftover      LeftoverAmount
+  comment       String?
+  
+  // 写真撮影機能用
+  photoUrl      String?       // 撮影写真のURL
+  reasonTags    String?       // 理由タグ（JSON配列）例: ["味", "量"]
+
+  menuPlan      MenuPlan?      @relation(fields: [menuPlanId], references: [id], onDelete: Cascade)
+  menuPlanId    String?
+
+  // テナント紐付け
+  vessel        Vessel?       @relation(fields: [vesselId], references: [id], onDelete: Cascade)
+  vesselId      String?
+
+  // 船員紐付け（カードベースフィードバック用）
+  crewMember    CrewMember?   @relation(fields: [crewMemberId], references: [id])
+  crewMemberId  String?
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([vesselId])
+  @@index([date])
+  @@index([crewMemberId])
+}
+
+// ========================================
+// 船員（カードベース識別用）
+// ========================================
+
+model CrewMember {
+  id        String   @id @default(cuid())
+  name      String
+  cardCode  String   @unique  // QRカードに印字する一意コード
+
+  vessel    Vessel   @relation(fields: [vesselId], references: [id], onDelete: Cascade)
+  vesselId  String
+
+  mealFeedbacks MealFeedback[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([vesselId])
+}
+
+// ========================================
+// レシピ除外（代替理由による学習）
+// ========================================
+
+model RecipeExclusion {
+  id        String         @id @default(cuid())
+  
+  recipe    Recipe         @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId  String
+  
+  scope     ExclusionScope
+  reason    String         // 除外理由の詳細
+  
+  // CHEF scope: この司厨のみ除外
+  user      User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String?
+  
+  // VESSEL scope: この船舶のみ除外
+  vessel    Vessel?        @relation(fields: [vesselId], references: [id], onDelete: Cascade)
+  vesselId  String?
+  
+  createdAt DateTime       @default(now())
+  
+  @@unique([recipeId, userId, scope])
+  @@unique([recipeId, vesselId, scope])
+  @@index([userId])
+  @@index([vesselId])
+}

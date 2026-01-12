@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db/prisma";
 import { MealType } from "@prisma/client";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   try {
@@ -13,32 +13,33 @@ export async function POST(req: Request) {
     };
 
     if (!date || !mealType || !oldRecipeId || !newRecipeId) {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+      return NextResponse.json({ error: "リクエスト内容が不正です" }, { status: 400 });
     }
 
     const id = `plan-${date}-${mealType}`;
-    await prisma.menuPlan.upsert({
-      where: { id },
-      update: {
-        recipeLinks: {
-          deleteMany: { recipeId: oldRecipeId },
-          create: [{ recipeId: newRecipeId }],
-        },
-      },
-      create: {
+    const supabase = await createSupabaseServerClient();
+    await supabase.from("MenuPlan").upsert(
+      {
         id,
         date,
         mealType,
         healthScore: 0,
-        recipeLinks: {
-          create: [{ recipeId: newRecipeId }],
-        },
       },
+      { onConflict: "id" },
+    );
+    await supabase
+      .from("MenuPlanRecipe")
+      .delete()
+      .eq("menuPlanId", id)
+      .eq("recipeId", oldRecipeId);
+    await supabase.from("MenuPlanRecipe").insert({
+      menuPlanId: id,
+      recipeId: newRecipeId,
     });
 
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("swap error", error);
-    return NextResponse.json({ error: "Failed to swap" }, { status: 500 });
+    return NextResponse.json({ error: "献立の入れ替えに失敗しました" }, { status: 500 });
   }
 }

@@ -44,10 +44,29 @@ export class DifyClient {
     async runWorkflow(inputs: DifyWorkflowInput): Promise<DifyValidationResult> {
         const url = `${this.baseUrl}/workflows/run`;
 
+        const normalizeForTextInput = (raw: DifyWorkflowInput): Record<string, unknown> => {
+            const normalized: Record<string, unknown> = { ...raw } as Record<string, unknown>;
+
+            if (Array.isArray(raw.banned_ingredients)) {
+                normalized.banned_ingredients = raw.banned_ingredients.join(',');
+            }
+            if (raw.weekday_rules && typeof raw.weekday_rules === 'object' && !Array.isArray(raw.weekday_rules)) {
+                normalized.weekday_rules = JSON.stringify(raw.weekday_rules);
+            }
+            if (Array.isArray(raw.allowed_recipe_ids)) {
+                normalized.allowed_recipe_ids = raw.allowed_recipe_ids.join(',');
+            }
+            if (Array.isArray(raw.recipes)) {
+                normalized.recipes = JSON.stringify(raw.recipes, null, 1);
+            }
+            return normalized;
+        };
+
         for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
             try {
-                const requestBody = {
-                    inputs,
+                let requestInputs: Record<string, unknown> = inputs as unknown as Record<string, unknown>;
+                let requestBody = {
+                    inputs: requestInputs,
                     response_mode: 'blocking',
                     user: 'wellship-server',
                 };
@@ -56,10 +75,10 @@ export class DifyClient {
                 console.log('📤 Sending request to Dify:');
                 console.log('   URL:', url);
                 console.log('   Inputs:');
-                console.log(JSON.stringify(inputs, null, 2));
+                console.log(JSON.stringify(requestInputs, null, 2));
                 console.log('');
 
-                const response = await this.fetchWithTimeout(url, {
+                let response = await this.fetchWithTimeout(url, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${this.apiKey}`,
@@ -67,6 +86,37 @@ export class DifyClient {
                     },
                     body: JSON.stringify(requestBody),
                 });
+
+                if (!response.ok) {
+                    // text-input 互換モード（入力フォームがstringのみのDifyに対応）
+                    if (response.status === 400) {
+                        const errJson = await response.json().catch(() => ({} as any));
+                        const errMessage = (errJson?.message ?? '').toString();
+                        if (/must be a string/i.test(errMessage)) {
+                            requestInputs = normalizeForTextInput(inputs);
+                            requestBody = {
+                                inputs: requestInputs,
+                                response_mode: 'blocking',
+                                user: 'wellship-server',
+                            };
+                            console.warn('⚠️ Dify入力がtext-inputのため、文字列モードで再送します');
+                            response = await this.fetchWithTimeout(url, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${this.apiKey}`,
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify(requestBody),
+                            });
+                        } else {
+                            throw new DifyError(
+                                errJson?.message || `Dify API error (${response.status})`,
+                                errJson?.code,
+                                response.status,
+                            );
+                        }
+                    }
+                }
 
                 if (!response.ok) {
                     // Retry on 5xx errors

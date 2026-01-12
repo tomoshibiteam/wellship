@@ -14,11 +14,8 @@ import { resolve } from 'path';
 // Load environment variables from .env.local
 config({ path: resolve(__dirname, '../.env.local') });
 
-import { PrismaClient } from '@prisma/client';
-import { createDifyClient } from '../src/lib/ai/dify-client';
-import type { DifyWorkflowInput } from '../src/lib/ai/dify-types';
-
-const prisma = new PrismaClient();
+import { createClient } from '@supabase/supabase-js';
+import { DifyMenuGenerator } from '../src/lib/ai/providers/dify';
 
 async function main() {
     console.log('🚀 Starting Dify API test...\n');
@@ -46,16 +43,28 @@ async function main() {
         // ========================================================================
         console.log('📋 Step 2: Fetching recipes from database...');
 
-        const recipes = await prisma.recipe.findMany({
-            include: {
-                ingredients: {
-                    include: {
-                        ingredient: true,
-                    },
-                },
-            },
-            take: 20, // Limit to 20 recipes for testing
-        });
+        if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+            throw new Error('❌ NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY is not set in .env.local');
+        }
+
+        const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            { auth: { persistSession: false } },
+        );
+
+        const { data: recipes, error: recipesError } = await supabase
+            .from('Recipe')
+            .select(
+                'id,name,category,calories,protein,salt,costPerServing,source,status,ingredients:RecipeIngredient(amount,ingredient:Ingredient(costPerUnit))',
+            )
+            .eq('source', 'my')
+            .eq('status', 'published')
+            .limit(20);
+
+        if (recipesError) {
+            throw recipesError;
+        }
 
         if (recipes.length === 0) {
             throw new Error('❌ No recipes found in database. Please seed the database first.');
@@ -70,18 +79,19 @@ async function main() {
 
         const recipeData = recipes.map((recipe) => {
             // Calculate ingredient cost
-            const ingredientCost = recipe.ingredients.reduce((sum, ri) => {
-                return sum + (ri.amount * ri.ingredient.costPerUnit);
+            const ingredientCost = (recipe.ingredients ?? []).reduce((sum, ri) => {
+                const ingredient = Array.isArray(ri.ingredient) ? ri.ingredient[0] : ri.ingredient;
+                return sum + (ri.amount * (ingredient?.costPerUnit ?? 0));
             }, 0);
 
             return {
                 id: recipe.id,
-                name: recipe.name,
-                category: recipe.category,
-                calories: recipe.calories,
-                protein: recipe.protein,
-                salt: recipe.salt,
-                costPerServing: ingredientCost > 0 ? ingredientCost : recipe.costPerServing,
+                name: recipe.name ?? '',
+                category: recipe.category ?? 'main',
+                calories: recipe.calories ?? 0,
+                protein: recipe.protein ?? 0,
+                salt: recipe.salt ?? 0,
+                costPerServing: ingredientCost > 0 ? ingredientCost : recipe.costPerServing ?? 0,
             };
         });
 
@@ -94,25 +104,25 @@ async function main() {
 
         const startDate = new Date().toISOString().slice(0, 10);
 
-        const input: DifyWorkflowInput = {
-            crew_count: 20,
+        const input = {
+            crewCount: 20,
             days: 3,
-            budget_per_person_per_day: 1200,
-            min_budget_usage_percent: 90,
-            start_date: startDate,
-            season: 'winter',
-            cooking_time_limit: 60,
-            banned_ingredients: '',
-            weekday_rules: JSON.stringify({}),
-            // Format recipes with newlines for Dify
-            recipes: JSON.stringify(recipeData, null, 1),
+            budgetPerPersonPerDay: 1200,
+            minBudgetUsagePercent: 90,
+            startDate,
+            season: 'winter' as const,
+            cookingTimeLimit: 60,
+            bannedIngredients: [] as string[],
+            weekdayRules: {} as Record<string, unknown>,
+            allowedRecipeIds: [] as string[],
+            recipes: recipeData,
         };
 
         console.log('✅ Test input prepared:');
-        console.log(`   Crew count: ${input.crew_count}`);
+        console.log(`   Crew count: ${input.crewCount}`);
         console.log(`   Days: ${input.days}`);
-        console.log(`   Budget per person per day: ¥${input.budget_per_person_per_day}`);
-        console.log(`   Start date: ${input.start_date}`);
+        console.log(`   Budget per person per day: ¥${input.budgetPerPersonPerDay}`);
+        console.log(`   Start date: ${input.startDate}`);
         console.log(`   Season: ${input.season}\n`);
 
         // ========================================================================
@@ -121,10 +131,10 @@ async function main() {
         console.log('📋 Step 5: Calling Dify API...');
         console.log('⏳ This may take up to 60 seconds...\n');
 
-        const client = createDifyClient();
+        const generator = new DifyMenuGenerator();
         const startTime = Date.now();
 
-        const result = await client.runWorkflow(input);
+        const result = await generator.generate(input);
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
         console.log(`✅ Dify API call completed in ${duration}s\n`);
@@ -132,27 +142,8 @@ async function main() {
         // ========================================================================
         // Step 6: Display results
         // ========================================================================
-        console.log('📋 Step 6: Validation results:');
-        console.log(`   Valid: ${result.success ? '✅' : '❌'}`);
-        console.log(`   Total days: ${result.total_days}`);
-        console.log(`   Total recipes: ${result.total_recipes}`);
-
-        if (result.errors && result.errors.length > 0) {
-            console.log(`   Errors: ${result.errors.length}`);
-            result.errors.forEach((error, i) => {
-                console.log(`     ${i + 1}. ${error}`);
-            });
-        }
-
-        if (result.warnings && result.warnings.length > 0) {
-            console.log(`   Warnings: ${result.warnings.length}`);
-            result.warnings.forEach((warning, i) => {
-                console.log(`     ${i + 1}. ${warning}`);
-            });
-        }
-
         console.log('\n📋 Generated menu:');
-        result.menu.days.forEach((day, index) => {
+        result.days.forEach((day, index) => {
             console.log(`\n   Day ${index + 1}: ${day.date} (${day.dayLabel})`);
             console.log(`     Breakfast: ${day.breakfast.join(', ')}`);
             console.log(`     Lunch: ${day.lunch.join(', ')}`);
@@ -165,7 +156,7 @@ async function main() {
         console.log('\n📋 Step 7: Verifying recipe IDs...');
 
         const validRecipeIds = new Set(recipeData.map(r => r.id));
-        const allMenuRecipeIds = result.menu.days.flatMap(day => [
+        const allMenuRecipeIds = result.days.flatMap(day => [
             ...day.breakfast,
             ...day.lunch,
             ...day.dinner,
@@ -197,8 +188,6 @@ async function main() {
             console.error(error);
         }
         process.exit(1);
-    } finally {
-        await prisma.$disconnect();
     }
 }
 

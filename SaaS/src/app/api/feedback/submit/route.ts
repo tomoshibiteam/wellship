@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
 import { VolumeFeeling, LeftoverAmount } from '@prisma/client';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 // 現在の食事タイプを推定
 function getCurrentMealType(): 'breakfast' | 'lunch' | 'dinner' {
@@ -46,9 +46,12 @@ export async function POST(request: Request) {
         }
 
         // 船員の存在確認
-        const crewMember = await prisma.crewMember.findUnique({
-            where: { id: crewMemberId },
-        });
+        const supabase = await createSupabaseServerClient();
+        const { data: crewMember } = await supabase
+            .from('CrewMember')
+            .select('id,vesselId')
+            .eq('id', crewMemberId)
+            .maybeSingle();
 
         if (!crewMember) {
             return NextResponse.json(
@@ -62,9 +65,12 @@ export async function POST(request: Request) {
         let menuPlan = null;
 
         if (!isDummyMenu) {
-            menuPlan = await prisma.menuPlan.findUnique({
-                where: { id: menuPlanId },
-            });
+            const { data } = await supabase
+                .from('MenuPlan')
+                .select('id,date,mealType')
+                .eq('id', menuPlanId)
+                .maybeSingle();
+            menuPlan = data ?? null;
         }
 
         // 日付と食事タイプを決定
@@ -73,8 +79,9 @@ export async function POST(request: Request) {
         const feedbackMealType = menuPlan?.mealType || getCurrentMealType();
 
         // フィードバック作成
-        const feedback = await prisma.mealFeedback.create({
-            data: {
+        const { data: feedback, error } = await supabase
+            .from('MealFeedback')
+            .insert({
                 date: feedbackDate,
                 mealType: feedbackMealType,
                 satisfaction,
@@ -86,8 +93,13 @@ export async function POST(request: Request) {
                 menuPlanId: menuPlan?.id ?? null,
                 vesselId: crewMember.vesselId,
                 crewMemberId,
-            },
-        });
+            })
+            .select('id')
+            .single();
+
+        if (error) {
+            throw error;
+        }
 
         return NextResponse.json({ success: true, feedbackId: feedback.id });
     } catch (error) {

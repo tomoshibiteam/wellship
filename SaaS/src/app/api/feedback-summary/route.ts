@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db/prisma";
 import { RecipeCategory } from "@prisma/client";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   try {
@@ -11,22 +11,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "開始日と終了日を指定してください。" }, { status: 400 });
     }
 
-    const feedbacks = await prisma.mealFeedback.findMany({
-      where: {
-        date: { gte: startDate, lte: endDate },
-      },
-      include: {
-        menuPlan: {
-          include: {
-            recipeLinks: {
-              include: { recipe: true },
-            },
-          },
-        },
-      },
-    });
+    const supabase = await createSupabaseServerClient();
+    const { data: feedbacks } = await supabase
+      .from("MealFeedback")
+      .select(
+        "id,date,mealType,satisfaction,leftover,volumeFeeling,menuPlan:MenuPlan(recipeLinks:MenuPlanRecipe(recipe:Recipe(id,name,category)))",
+      )
+      .gte("date", startDate)
+      .lte("date", endDate);
 
-    if (!feedbacks.length) {
+    if (!feedbacks || feedbacks.length === 0) {
       return NextResponse.json({
         summary: {
           count: 0,
@@ -77,20 +71,29 @@ export async function POST(request: Request) {
       { id: string; name: string; sum: number; count: number; noLeftover: number }
     >();
     for (const fb of feedbacks) {
+      const menuPlan = Array.isArray(fb.menuPlan) ? fb.menuPlan[0] : fb.menuPlan;
+      const recipeLinks = menuPlan?.recipeLinks ?? [];
       const mainRecipe =
-        fb.menuPlan?.recipeLinks.find((rl) => rl.recipe.category === RecipeCategory.main)?.recipe ??
-        fb.menuPlan?.recipeLinks[0]?.recipe;
-      if (!mainRecipe) continue;
-      if (!recipeMap.has(mainRecipe.id)) {
-        recipeMap.set(mainRecipe.id, {
-          id: mainRecipe.id,
-          name: mainRecipe.name,
+        recipeLinks
+          .find((rl) => {
+            const recipe = Array.isArray(rl.recipe) ? rl.recipe[0] : rl.recipe;
+            return recipe?.category === RecipeCategory.main;
+          })
+          ?.recipe ??
+        recipeLinks[0]?.recipe;
+
+      const normalizedRecipe = Array.isArray(mainRecipe) ? mainRecipe[0] : mainRecipe;
+      if (!normalizedRecipe) continue;
+      if (!recipeMap.has(normalizedRecipe.id)) {
+        recipeMap.set(normalizedRecipe.id, {
+          id: normalizedRecipe.id,
+          name: normalizedRecipe.name,
           sum: 0,
           count: 0,
           noLeftover: 0,
         });
       }
-      const entry = recipeMap.get(mainRecipe.id)!;
+      const entry = recipeMap.get(normalizedRecipe.id)!;
       entry.sum += fb.satisfaction;
       entry.count += 1;
       if (fb.leftover === "none") entry.noLeftover += 1;

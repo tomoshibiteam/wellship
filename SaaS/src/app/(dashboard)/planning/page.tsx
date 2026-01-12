@@ -3,7 +3,7 @@ import { UnifiedPlanningClient } from "./unified-planning-client";
 import { getLatestPlanRange, loadExistingPlan } from "./actions";
 import { loadDefaultStartDate } from "../procurement/actions";
 import { getCurrentUser } from "@/lib/auth/session";
-import { prisma } from "@/lib/db/prisma";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function PlanningPage() {
   const user = await getCurrentUser();
@@ -15,10 +15,15 @@ export default async function PlanningPage() {
 
   // Vessel設定を取得（季節・調理時間のデフォルト値）
   const vesselSettings = vesselId
-    ? await prisma.vessel.findUnique({
-      where: { id: vesselId },
-      select: { defaultSeason: true, defaultMaxCookingTime: true },
-    })
+    ? await (async () => {
+      const supabase = await createSupabaseServerClient();
+      const { data } = await supabase
+        .from("Vessel")
+        .select("defaultSeason,defaultMaxCookingTime")
+        .eq("id", vesselId)
+        .maybeSingle();
+      return data ?? null;
+    })()
     : null;
 
   return (

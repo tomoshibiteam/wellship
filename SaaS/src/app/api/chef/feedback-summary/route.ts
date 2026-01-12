@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
 import { getCurrentUser } from '@/lib/auth/session';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function GET(request: Request) {
     try {
@@ -27,11 +27,17 @@ export async function GET(request: Request) {
             whereClause.vesselId = vesselId;
         }
 
-        const feedbacks = await prisma.mealFeedback.findMany({
-            where: whereClause,
-        });
+        const supabase = await createSupabaseServerClient();
+        let query = supabase
+            .from('MealFeedback')
+            .select('satisfaction,volumeFeeling,leftover');
+        query = query.eq('date', whereClause.date);
+        if (whereClause.vesselId) {
+            query = query.eq('vesselId', whereClause.vesselId);
+        }
+        const { data: feedbacks } = await query;
 
-        if (feedbacks.length === 0) {
+        if (!feedbacks || feedbacks.length === 0) {
             return NextResponse.json({
                 date: dateParam,
                 count: 0,
@@ -48,7 +54,8 @@ export async function GET(request: Request) {
         // 量の分布
         const volumeCounts = { less: 0, just: 0, much: 0 };
         feedbacks.forEach((f) => {
-            volumeCounts[f.volumeFeeling]++;
+            const key = f.volumeFeeling as keyof typeof volumeCounts;
+            if (key in volumeCounts) volumeCounts[key] += 1;
         });
         const volumeDistribution = {
             less: volumeCounts.less / count,
@@ -59,7 +66,8 @@ export async function GET(request: Request) {
         // 残量の分布
         const leftoverCounts = { none: 0, half: 0, almostAll: 0 };
         feedbacks.forEach((f) => {
-            leftoverCounts[f.leftover]++;
+            const key = f.leftover as keyof typeof leftoverCounts;
+            if (key in leftoverCounts) leftoverCounts[key] += 1;
         });
         const leftoverDistribution = {
             none: leftoverCounts.none / count,

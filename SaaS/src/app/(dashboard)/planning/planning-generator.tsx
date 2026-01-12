@@ -128,17 +128,26 @@ export default function PlanningGenerator({
             maxCookingTimeMinutes: maxCookingTime || undefined,
           },
         };
+        if (process.env.NODE_ENV !== "production") {
+          console.log("[AI生成] /api/menu/generate payload", payload);
+        }
         const res = await fetch("/api/menu/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error("failed");
-        const json = await res.json();
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(json?.error || "生成に失敗しました。");
+        }
         setPlan(json.plan ?? null);
       } catch (err) {
         console.error("generate error", err);
-        setGenerateError("生成に失敗しました。ネットワークを確認して再試行してください。");
+        const message =
+          err instanceof Error
+            ? err.message
+            : "生成に失敗しました。ネットワークを確認して再試行してください。";
+        setGenerateError(message);
       }
     });
   };

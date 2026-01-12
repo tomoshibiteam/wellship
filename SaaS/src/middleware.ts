@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
-import { ROLE_PERMISSIONS } from '@/lib/auth/guards';
+import { createServerClient } from '@supabase/ssr';
 
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
@@ -26,30 +25,40 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
-    const token = await getToken({ req: request });
+    const response = NextResponse.next();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+        return response;
+    }
+
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
+        cookies: {
+            get(name: string) {
+                return request.cookies.get(name)?.value;
+            },
+            set(name: string, value: string, options: any) {
+                response.cookies.set({ name, value, ...options });
+            },
+            remove(name: string, options: any) {
+                response.cookies.set({ name, value: '', ...options });
+            },
+        },
+    });
+
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
 
     // 未ログインはログインページへ
-    if (!token) {
+    if (!user) {
         const loginUrl = new URL('/login', request.url);
         loginUrl.searchParams.set('callbackUrl', pathname);
         return NextResponse.redirect(loginUrl);
     }
 
-    const role = token.role as keyof typeof ROLE_PERMISSIONS;
-    const permission = ROLE_PERMISSIONS[role];
-
-    if (!permission) {
-        return NextResponse.redirect(new URL('/login', request.url));
-    }
-
-    // ロールに許可されたパスかチェック
-    const isAllowed = permission.allowedPaths.some((p) => pathname.startsWith(p));
-
-    if (!isAllowed) {
-        return NextResponse.redirect(new URL(permission.defaultRedirect, request.url));
-    }
-
-    return NextResponse.next();
+    return response;
 }
 
 export const config = {

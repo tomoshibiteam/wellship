@@ -70,8 +70,8 @@ export function validateFeatureFlags(): void {
         if (!process.env.DIFY_API_KEY) {
             warnings.push('DIFY_API_KEY is not set but aiProvider is "dify"');
         }
-        if (!process.env.DIFY_WORKFLOW_URL && !process.env.DIFY_APP_ID) {
-            warnings.push('Neither DIFY_WORKFLOW_URL nor DIFY_APP_ID is set');
+        if (!process.env.DIFY_WORKFLOW_URL && !process.env.DIFY_BASE_URL && !process.env.DIFY_APP_ID) {
+            warnings.push('Neither DIFY_WORKFLOW_URL, DIFY_BASE_URL, nor DIFY_APP_ID is set');
         }
     }
 

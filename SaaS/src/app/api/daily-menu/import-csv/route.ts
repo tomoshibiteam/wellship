@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
 import { MealType } from '@prisma/client';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 /**
  * POST /api/daily-menu/import-csv
@@ -29,6 +29,8 @@ export async function POST(request: NextRequest) {
         if (!file || !vesselId || !targetDate || !mealType) {
             return NextResponse.json({ error: '必須パラメータが不足しています' }, { status: 400 });
         }
+
+        const supabase = await createSupabaseServerClient();
 
         // CSVを読み込み
         const text = await file.text();
@@ -87,13 +89,17 @@ export async function POST(request: NextRequest) {
             }
 
             // レシピをDBから取得
-            const recipes = await prisma.recipe.findMany({
-                where: { name: { in: Array.from(allRecipeNames) } },
-                select: { id: true, name: true },
-            });
-            const recipeMap = new Map(recipes.map(r => [r.name, r.id]));
+            const { data: recipes, error: recipeError } = await supabase
+                .from('Recipe')
+                .select('id,name')
+                .in('name', Array.from(allRecipeNames));
+            if (recipeError) {
+                throw recipeError;
+            }
+            const recipeRows = recipes ?? [];
+            const recipeMap = new Map(recipeRows.map(r => [r.name, r.id]));
 
-            console.log('CSV import: found recipes in DB', recipes.length, 'of', allRecipeNames.size);
+            console.log('CSV import: found recipes in DB', recipeRows.length, 'of', allRecipeNames.size);
 
             // 各日付・食事タイプごとに献立を作成/更新
             let createdCount = 0;
@@ -108,35 +114,61 @@ export async function POST(request: NextRequest) {
                 if (recipeIds.length === 0) continue;
 
                 // 既存の献立を確認
-                let menuPlan = await prisma.menuPlan.findFirst({
-                    where: { vesselId, date, mealType: meal as MealType },
-                });
+                const { data: menuPlan, error: menuPlanError } = await supabase
+                    .from('MenuPlan')
+                    .select('id')
+                    .eq('vesselId', vesselId)
+                    .eq('date', date)
+                    .eq('mealType', meal as MealType)
+                    .maybeSingle();
+                if (menuPlanError) {
+                    throw menuPlanError;
+                }
 
                 if (menuPlan) {
                     // 既存を更新
-                    await prisma.menuPlanRecipe.deleteMany({
-                        where: { menuPlanId: menuPlan.id },
-                    });
-                    await prisma.menuPlanRecipe.createMany({
-                        data: recipeIds.map(recipeId => ({
-                            menuPlanId: menuPlan!.id,
-                            recipeId,
-                        })),
-                    });
+                    await supabase
+                        .from('MenuPlanRecipe')
+                        .delete()
+                        .eq('menuPlanId', menuPlan.id);
+                    const { error: insertError } = await supabase
+                        .from('MenuPlanRecipe')
+                        .insert(
+                            recipeIds.map(recipeId => ({
+                                menuPlanId: menuPlan.id,
+                                recipeId,
+                            })),
+                        );
+                    if (insertError) {
+                        throw insertError;
+                    }
                     updatedCount++;
                 } else {
                     // 新規作成
-                    await prisma.menuPlan.create({
-                        data: {
+                    const { data: createdPlan, error: createError } = await supabase
+                        .from('MenuPlan')
+                        .insert({
                             vesselId,
                             date,
                             mealType: meal as MealType,
                             healthScore: 75,
-                            recipeLinks: {
-                                create: recipeIds.map(recipeId => ({ recipeId })),
-                            },
-                        },
-                    });
+                        })
+                        .select('id')
+                        .single();
+                    if (createError) {
+                        throw createError;
+                    }
+                    const { error: linkError } = await supabase
+                        .from('MenuPlanRecipe')
+                        .insert(
+                            recipeIds.map(recipeId => ({
+                                menuPlanId: createdPlan.id,
+                                recipeId,
+                            })),
+                        );
+                    if (linkError) {
+                        throw linkError;
+                    }
                     createdCount++;
                 }
             }
@@ -160,12 +192,15 @@ export async function POST(request: NextRequest) {
             }
 
             // レシピをDBから取得
-            const recipes = await prisma.recipe.findMany({
-                where: { name: { in: recipeNames } },
-                select: { id: true, name: true },
-            });
+            const { data: recipes, error: recipeError } = await supabase
+                .from('Recipe')
+                .select('id,name')
+                .in('name', recipeNames);
+            if (recipeError) {
+                throw recipeError;
+            }
 
-            if (recipes.length === 0) {
+            if (!recipes || recipes.length === 0) {
                 return NextResponse.json({
                     error: '一致するレシピが見つかりませんでした。',
                     recipeNames,
@@ -173,32 +208,55 @@ export async function POST(request: NextRequest) {
             }
 
             // 献立を作成/更新
-            let menuPlan = await prisma.menuPlan.findFirst({
-                where: { vesselId, date: targetDate, mealType: mealType as MealType },
-            });
+            const { data: menuPlan, error: menuPlanError } = await supabase
+                .from('MenuPlan')
+                .select('id')
+                .eq('vesselId', vesselId)
+                .eq('date', targetDate)
+                .eq('mealType', mealType as MealType)
+                .maybeSingle();
+            if (menuPlanError) {
+                throw menuPlanError;
+            }
 
             if (menuPlan) {
-                await prisma.menuPlanRecipe.deleteMany({
-                    where: { menuPlanId: menuPlan.id },
-                });
-                await prisma.menuPlanRecipe.createMany({
-                    data: recipes.map(r => ({
-                        menuPlanId: menuPlan!.id,
-                        recipeId: r.id,
-                    })),
-                });
+                await supabase
+                    .from('MenuPlanRecipe')
+                    .delete()
+                    .eq('menuPlanId', menuPlan.id);
+                const { error: insertError } = await supabase
+                    .from('MenuPlanRecipe')
+                    .insert(
+                        recipes.map(r => ({
+                            menuPlanId: menuPlan.id,
+                            recipeId: r.id,
+                        })),
+                    );
+                if (insertError) {
+                    throw insertError;
+                }
             } else {
-                await prisma.menuPlan.create({
-                    data: {
+                const { data: createdPlan, error: createError } = await supabase
+                    .from('MenuPlan')
+                    .insert({
                         vesselId,
                         date: targetDate,
                         mealType: mealType as MealType,
                         healthScore: 75,
-                        recipeLinks: {
-                            create: recipes.map(r => ({ recipeId: r.id })),
-                        },
-                    },
-                });
+                    })
+                    .select('id')
+                    .single();
+                if (createError) {
+                    throw createError;
+                }
+                const { error: linkError } = await supabase
+                    .from('MenuPlanRecipe')
+                    .insert(
+                        recipes.map(r => ({ menuPlanId: createdPlan.id, recipeId: r.id })),
+                    );
+                if (linkError) {
+                    throw linkError;
+                }
             }
 
             return NextResponse.json({

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
 import { getCurrentUser } from '@/lib/auth/session';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 /**
  * GET /api/procurement/export-menu-csv
@@ -23,34 +23,23 @@ export async function GET(request: NextRequest) {
         }
 
         // 該当期間の献立を取得
-        const menuPlans = await prisma.menuPlan.findMany({
-            where: {
-                date: {
-                    gte: startDate,
-                    lte: endDate,
-                },
-                ...(vesselId ? { vesselId } : {}),
-            },
-            include: {
-                recipeLinks: {
-                    include: {
-                        recipe: {
-                            include: {
-                                ingredients: {
-                                    include: {
-                                        ingredient: true,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-            orderBy: [
-                { date: 'asc' },
-                { mealType: 'asc' },
-            ],
-        });
+        const supabase = await createSupabaseServerClient();
+        let query = supabase
+            .from('MenuPlan')
+            .select(
+                'date,mealType,recipeLinks:MenuPlanRecipe(recipe:Recipe(name,category,ingredients:RecipeIngredient(amount,ingredient:Ingredient(name,unit,costPerUnit))))',
+            )
+            .gte('date', startDate)
+            .lte('date', endDate)
+            .order('date', { ascending: true })
+            .order('mealType', { ascending: true });
+        if (vesselId) {
+            query = query.eq('vesselId', vesselId);
+        }
+        const { data: menuPlans, error } = await query;
+        if (error) {
+            throw error;
+        }
 
         // CSVデータを構築
         const rows: string[] = [];
@@ -58,20 +47,25 @@ export async function GET(request: NextRequest) {
         // ヘッダー
         rows.push('日付,食事タイプ,レシピ名,カテゴリ,食材名,使用量,単位,単価');
 
-        for (const plan of menuPlans) {
-            for (const link of plan.recipeLinks) {
-                const recipe = link.recipe;
-                if (recipe.ingredients.length > 0) {
-                    for (const ing of recipe.ingredients) {
+        for (const plan of menuPlans ?? []) {
+            const links = plan.recipeLinks ?? [];
+            for (const link of links) {
+                const recipe = Array.isArray(link.recipe) ? link.recipe[0] : link.recipe;
+                if (!recipe) continue;
+                const recipeIngredients = recipe.ingredients ?? [];
+                if (recipeIngredients.length > 0) {
+                    for (const ing of recipeIngredients) {
+                        const ingredient = Array.isArray(ing.ingredient) ? ing.ingredient[0] : ing.ingredient;
+                        if (!ingredient) continue;
                         rows.push([
                             plan.date,
                             plan.mealType,
                             recipe.name,
                             recipe.category,
-                            ing.ingredient.name,
+                            ingredient.name,
                             ing.amount.toString(),
-                            ing.ingredient.unit,
-                            ing.ingredient.costPerUnit.toString(),
+                            ingredient.unit,
+                            (ingredient.costPerUnit ?? 0).toString(),
                         ].join(','));
                     }
                 } else {

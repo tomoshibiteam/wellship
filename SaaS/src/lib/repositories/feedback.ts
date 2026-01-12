@@ -1,13 +1,18 @@
-import { prisma } from "@/lib/db/prisma";
 import { MealFeedback } from "@/lib/types";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function getAllMealFeedback(): Promise<MealFeedback[]> {
-  const feedbacks = await prisma.mealFeedback.findMany({
-    orderBy: [
-      { date: "desc" },
-      { mealType: "desc" },
-    ],
-  });
+  const supabase = await createSupabaseServerClient();
+  const { data: feedbacks, error } = await supabase
+    .from("MealFeedback")
+    .select("id,date,mealType,menuPlanId,satisfaction,volumeFeeling,leftover,comment")
+    .order("date", { ascending: false })
+    .order("mealType", { ascending: false });
+
+  if (error || !feedbacks) {
+    console.error("Failed to load feedbacks", error);
+    return [];
+  }
 
   return feedbacks.map((fb) => ({
     id: fb.id,

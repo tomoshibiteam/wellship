@@ -15,6 +15,8 @@
     "@google/generative-ai": "^0.24.1",
     "@heroicons/react": "^2.2.0",
     "@prisma/client": "^6.19.0",
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "^2.57.4",
     "bcryptjs": "^3.0.3",
     "framer-motion": "^12.23.26",
     "html5-qrcode": "^2.3.8",

@@ -56,11 +56,11 @@ export function getRoleDisplayName(role: UserRole): string {
  */
 export const ROLE_PERMISSIONS = {
     CHEF: {
-        allowedPaths: ['/planning', '/daily-menu', '/procurement', '/feedback', '/feedback-entry', '/feedback-summary'],
+        allowedPaths: ['/recipes', '/planning', '/daily-menu', '/procurement', '/feedback', '/feedback-entry', '/feedback-summary'],
         defaultRedirect: '/planning',
     },
     MANAGER: {
         allowedPaths: ['/feedback-insights', '/manager', '/executive'],
-        defaultRedirect: '/manager/dashboard',
+        defaultRedirect: '/manager/dashboard?scope=all&range=7d',
     },
 } as const;

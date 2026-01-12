@@ -1,9 +1,8 @@
 import { PageHeader } from "@/components/page-header";
 import { getCurrentUser } from "@/lib/auth/session";
-import { prisma } from "@/lib/db/prisma";
 import { redirect } from "next/navigation";
-import { AIAnalysisResult } from "@/components/feedback/close-feedback-client";
 import { features } from "@/lib/config/features";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 
 export default async function ChefFeedbackSummaryPage() {
@@ -14,16 +13,21 @@ export default async function ChefFeedbackSummaryPage() {
     }
 
     // 司厨が担当する船舶を取得
-    const membership = await prisma.userVesselMembership.findFirst({
-        where: { userId: user.id },
-        include: { vessel: true },
-    });
+    const supabase = await createSupabaseServerClient();
+    const { data: membership } = await supabase
+        .from("UserVesselMembership")
+        .select("vessel:Vessel(id)")
+        .eq("userId", user.id)
+        .maybeSingle();
 
     if (!membership) {
         redirect('/planning');
     }
 
-    const vesselId = membership.vessel.id;
+    const vessel = Array.isArray(membership.vessel)
+        ? membership.vessel[0]
+        : membership.vessel;
+    const vesselId = vessel?.id;
     const today = new Date().toISOString().slice(0, 10);
 
     // 過去7日間のフィードバックを取得
@@ -31,12 +35,14 @@ export default async function ChefFeedbackSummaryPage() {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const startDate = sevenDaysAgo.toISOString().slice(0, 10);
 
-    const feedbacks = await prisma.mealFeedback.findMany({
-        where: {
-            vesselId,
-            date: { gte: startDate, lte: today },
-        },
-    });
+    const { data: feedbacksRaw } = await supabase
+        .from("MealFeedback")
+        .select("id,date,mealType,satisfaction,volumeFeeling,leftover,comment,photoUrl,createdAt")
+        .eq("vesselId", vesselId ?? "")
+        .gte("date", startDate)
+        .lte("date", today);
+
+    const feedbacks = feedbacksRaw ?? [];
 
     // 統計計算
     const totalCount = feedbacks.length;
@@ -203,17 +209,7 @@ export default async function ChefFeedbackSummaryPage() {
                                             </div>
                                         </div>
                                     </div>
-                                    {/* AI分析結果 (MVP: 写真機能無効時は非表示) */}
-                                    {features.photoFeedback && (
-                                        <AIAnalysisResult
-                                            aiAnalysisStatus={f.aiAnalysisStatus}
-                                            aiLeftoverPercent={f.aiLeftoverPercent}
-                                            aiLeftoverLevel={f.aiLeftoverLevel}
-                                            aiConfidence={f.aiConfidence}
-                                            aiNote={f.aiNote}
-                                            leftover={f.leftover}
-                                        />
-                                    )}
+
                                 </div>
                             ))}
                     </div>

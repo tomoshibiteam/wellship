@@ -6,8 +6,9 @@ This file documents all environment variables used in the WELLSHIP MVP applicati
 
 ### Authentication
 ```env
-NEXTAUTH_SECRET=your_secret_here
-NEXTAUTH_URL=http://localhost:3000
+# Supabase Auth
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 ```
 
 ### AI Services
@@ -88,6 +89,12 @@ DIFY_APP_ID=your_dify_app_id_here
    - `WELLSHIP_PHOTO_FEEDBACK_ENABLED=false`
    - `WELLSHIP_AI_PROVIDER=dify`
    - `WELLSHIP_SOURCING_ENABLED=false`
+
+## Supabase Schema Setup
+
+1. Open Supabase Dashboard > SQL Editor.
+2. Run the SQL in `SaaS/supabase/schema.sql` to create the app tables.
+3. Restart the dev server after the schema is applied.
 
 ## Development vs Production
 

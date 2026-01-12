@@ -1,8 +1,8 @@
 import { PageHeader } from "@/components/page-header";
 import { getCurrentUser } from "@/lib/auth/session";
-import { prisma } from "@/lib/db/prisma";
 import { redirect } from "next/navigation";
 import { DailyMenuClient } from "@/components/daily-menu/daily-menu-client";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function DailyMenuPage() {
     const user = await getCurrentUser();
@@ -12,34 +12,28 @@ export default async function DailyMenuPage() {
     }
 
     // 司厨が担当する船舶を取得
-    const membership = await prisma.userVesselMembership.findFirst({
-        where: { userId: user.id },
-        include: { vessel: true },
-    });
+    const supabase = await createSupabaseServerClient();
+    const { data: membership } = await supabase
+        .from("UserVesselMembership")
+        .select("vessel:Vessel(id,name)")
+        .eq("userId", user.id)
+        .maybeSingle();
 
     if (!membership) {
         redirect('/planning');
     }
 
-    const vessel = membership.vessel;
+    const vessel = Array.isArray(membership.vessel)
+        ? membership.vessel[0]
+        : membership.vessel;
 
     // 全レシピを取得（選択用）
-    const recipes = await prisma.recipe.findMany({
-        where: { companyId: user.companyId },
-        orderBy: [
-            { category: 'asc' },
-            { name: 'asc' },
-        ],
-        select: {
-            id: true,
-            name: true,
-            category: true,
-            calories: true,
-            protein: true,
-            salt: true,
-            costPerServing: true,
-        },
-    });
+    const { data: recipes } = await supabase
+        .from("Recipe")
+        .select("id,name,category,calories,protein,salt,costPerServing")
+        .eq("companyId", user.companyId)
+        .order("category", { ascending: true })
+        .order("name", { ascending: true });
 
     return (
         <div className="space-y-6">
@@ -50,9 +44,9 @@ export default async function DailyMenuPage() {
             />
 
             <DailyMenuClient
-                vesselId={vessel.id}
-                vesselName={vessel.name}
-                recipes={recipes}
+                vesselId={vessel?.id ?? ""}
+                vesselName={vessel?.name ?? ""}
+                recipes={recipes ?? []}
             />
         </div>
     );
