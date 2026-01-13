@@ -1,6 +1,6 @@
 
 import { NextResponse } from "next/server";
-import { generateMenuPlan } from "@/app/(dashboard)/planning/actions";
+import { generateMenuPlan } from "@/app/(chef)/planning/actions";
 
 export async function POST(request: Request) {
   try {

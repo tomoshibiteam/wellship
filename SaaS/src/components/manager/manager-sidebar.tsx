@@ -3,43 +3,23 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  AlertTriangle,
-  BarChart3,
   LayoutDashboard,
   Ship,
-  Users,
 } from 'lucide-react';
+import { ROUTES } from '@/lib/routes';
 
 const navItems = [
   {
-    href: '/manager/dashboard',
+    href: ROUTES.manager.dashboard,
     label: 'ダッシュボード',
-    description: '全体KPIとアラート',
+    description: 'KPI・フィードバック分析',
     icon: LayoutDashboard,
   },
   {
-    href: '/manager/vessels',
-    label: '船舶（フリート）',
-    description: '船の状態と担当',
+    href: ROUTES.manager.vessels,
+    label: '船舶・船員管理',
+    description: 'フリート・クルー・カード',
     icon: Ship,
-  },
-  {
-    href: '/manager/feedback',
-    label: 'フィードバック分析',
-    description: '満足度と理由',
-    icon: BarChart3,
-  },
-  {
-    href: '/manager/alerts',
-    label: 'アラート',
-    description: '異常の検知と対応',
-    icon: AlertTriangle,
-  },
-  {
-    href: '/manager/crew',
-    label: 'クルー管理',
-    description: 'カードと食制約',
-    icon: Users,
   },
 ];
 
@@ -63,25 +43,22 @@ export function ManagerSidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`group flex items-center gap-3 rounded-xl px-3 py-3 transition ${
-                isActive
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
+              className={`group flex items-center gap-3 rounded-xl px-3 py-3 transition ${isActive
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+                }`}
             >
               <span
-                className={`flex h-9 w-9 items-center justify-center rounded-lg ${
-                  isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
-                }`}
+                className={`flex h-9 w-9 items-center justify-center rounded-lg ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                  }`}
               >
                 <Icon className="h-5 w-5" />
               </span>
               <div>
                 <p className="text-sm font-semibold">{item.label}</p>
                 <p
-                  className={`text-xs ${
-                    isActive ? 'text-white/70' : 'text-slate-400'
-                  }`}
+                  className={`text-xs ${isActive ? 'text-white/70' : 'text-slate-400'
+                    }`}
                 >
                   {item.description}
                 </p>

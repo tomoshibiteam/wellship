@@ -120,11 +120,10 @@ export function AppShell({ children, user }: AppShellProps) {
                       type="button"
                       onClick={() => switchRole('CHEF')}
                       disabled={isSwitchingRole || user.role === 'CHEF'}
-                      className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${
-                        user.role === 'CHEF'
+                      className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${user.role === 'CHEF'
                           ? 'bg-sky-600 text-white'
                           : 'text-slate-600 hover:bg-sky-50'
-                      }`}
+                        }`}
                     >
                       司厨
                     </button>
@@ -132,11 +131,10 @@ export function AppShell({ children, user }: AppShellProps) {
                       type="button"
                       onClick={() => switchRole('MANAGER')}
                       disabled={isSwitchingRole || user.role === 'MANAGER'}
-                      className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${
-                        user.role === 'MANAGER'
+                      className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${user.role === 'MANAGER'
                           ? 'bg-sky-600 text-white'
                           : 'text-slate-600 hover:bg-sky-50'
-                      }`}
+                        }`}
                     >
                       本部
                     </button>

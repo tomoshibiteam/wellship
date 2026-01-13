@@ -92,8 +92,8 @@ export function getDashboardSummary(scope: ManagerScope, range: ManagerRange) {
   const avg = (key: keyof Vessel['metrics']) =>
     vessels.length === 0
       ? 0
-      : vessels.reduce((sum, vessel) => sum + vessel.metrics[key], 0) /
-        vessels.length;
+      : vessels.reduce((sum, vessel) => sum + (vessel.metrics[key] as number), 0) /
+      vessels.length;
 
   const responseRate = avg('responseRate');
   const positiveRate = avg('positiveRate');

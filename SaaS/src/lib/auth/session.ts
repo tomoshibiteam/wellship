@@ -1,6 +1,7 @@
 import type { SessionUser, UserRole } from '@/lib/types/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
+import { ROUTES, getDefaultRouteForRole } from '@/lib/routes';
 
 type SupabaseUserRow = {
     id: string;
@@ -261,12 +262,6 @@ export async function requireRole(allowedRoles: UserRole[]): Promise<SessionUser
  * ロールに基づくデフォルトリダイレクト先を取得
  */
 export function getDefaultRedirect(role: UserRole): string {
-    switch (role) {
-        case 'CHEF':
-            return '/planning';
-        case 'MANAGER':
-            return '/manager/dashboard?scope=all&range=7d';
-        default:
-            return '/';
-    }
+    return getDefaultRouteForRole(role);
 }
+

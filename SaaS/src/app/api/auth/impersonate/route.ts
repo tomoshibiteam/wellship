@@ -27,7 +27,6 @@ export async function POST(request: NextRequest) {
 
     const override = request.cookies.get('role_override')?.value;
     const allowOverride =
-        process.env.NODE_ENV !== 'production' &&
         baseUser?.email?.toLowerCase() === TEST_ADMIN_EMAIL &&
         override === 'MANAGER';
     const effectiveManager = baseUser?.role === 'MANAGER' || allowOverride;

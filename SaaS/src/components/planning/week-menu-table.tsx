@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from "react";
 import { Recipe } from "@prisma/client";
-import { GeneratedDay } from "@/app/(dashboard)/planning/actions";
+import { GeneratedDay } from "@/app/(chef)/planning/actions";
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
 
 interface WeekMenuTableProps {

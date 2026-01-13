@@ -1,34 +1,56 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo } from 'react';
-import { usePathname } from 'next/navigation';
-import { Bell, ChevronDown, LogOut, Settings, Users } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown, LogOut, Settings, Users } from 'lucide-react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import { useManagerSearchParams } from '@/components/manager/use-manager-search-params';
-import { getAlertCount } from '@/lib/manager/data';
-import type { ManagerRange, ManagerScope } from '@/lib/manager/types';
+import type { UserRole } from '@/lib/types/auth';
+import { ROUTES } from '@/lib/routes';
 
 interface ManagerTopBarProps {
   user: {
     name: string | null;
     email: string;
-    role: 'MANAGER';
+    role: UserRole;
   };
-  vessels: { id: string; name: string }[];
 }
 
-const rangeOptions: { label: string; value: ManagerRange }[] = [
-  { label: '7日間', value: '7d' },
-  { label: '30日間', value: '30d' },
-  { label: '90日間', value: '90d' },
-];
+export function ManagerTopBar({ user }: ManagerTopBarProps) {
+  const [isSwitchingRole, setIsSwitchingRole] = useState(false);
 
-export function ManagerTopBar({ user, vessels }: ManagerTopBarProps) {
-  const pathname = usePathname();
-  const { scope, range, setScope, setRange } = useManagerSearchParams();
+  const canRoleSwitch =
+    !!user &&
+    process.env.NODE_ENV !== 'production' &&
+    user.email.toLowerCase() === 'wataru.1998.0606@gmail.com';
 
-  const alertCount = useMemo(() => getAlertCount(scope, range), [scope, range]);
+  // MVP用: ロールに応じた表示名
+  const displayName = user?.role === 'MANAGER' ? '佐藤' : user?.name || user?.email || '';
+
+  const switchRole = async (role: UserRole) => {
+    if (!user || isSwitchingRole || role === user.role) return;
+    setIsSwitchingRole(true);
+    try {
+      const res = await fetch('/api/auth/role-override', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error('Failed to switch role', data);
+        return;
+      }
+      const target =
+        role === 'CHEF'
+          ? ROUTES.chef.recipes
+          : ROUTES.manager.dashboard;
+
+      // Use window.location for hard reload to ensure clean state transition
+      window.location.href = target;
+    } finally {
+      setIsSwitchingRole(false);
+    }
+  };
 
   const handleLogout = () => {
     const supabase = createSupabaseBrowserClient();
@@ -37,64 +59,45 @@ export function ManagerTopBar({ user, vessels }: ManagerTopBarProps) {
     });
   };
 
-  const currentScope = scope;
-
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/90 px-6 py-3 backdrop-blur">
       <div className="flex flex-wrap items-center gap-3">
-        <div>
-          <label className="block text-[11px] font-semibold text-slate-500">船舶スコープ</label>
-          <select
-            value={currentScope}
-            onChange={(event) => setScope(event.target.value as ManagerScope)}
-            className="mt-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none"
-          >
-            <option value="all">All Fleet</option>
-            {vessels.map((vessel) => (
-              <option key={vessel.id} value={`vessel:${vessel.id}`}>
-                {vessel.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-[11px] font-semibold text-slate-500">期間</label>
-          <select
-            value={range}
-            onChange={(event) => setRange(event.target.value as ManagerRange)}
-            className="mt-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none"
-          >
-            {rangeOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Role Switcher */}
+        {canRoleSwitch && (
+          <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-1">
+            <button
+              type="button"
+              onClick={() => switchRole('CHEF')}
+              disabled={isSwitchingRole || user.role === 'CHEF'}
+              className={`rounded-md px-3 py-1 text-xs font-semibold transition ${user.role === 'CHEF'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+                }`}
+            >
+              司厨
+            </button>
+            <button
+              type="button"
+              onClick={() => switchRole('MANAGER')}
+              disabled={isSwitchingRole || user.role === 'MANAGER'}
+              className={`rounded-md px-3 py-1 text-xs font-semibold transition ${user.role === 'MANAGER'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+                }`}
+            >
+              本部
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-3">
-        <Link
-          href={`/manager/alerts?scope=${scope}&range=${range}&status=open`}
-          className={`relative flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-100 ${
-            pathname.startsWith('/manager/alerts') ? 'ring-2 ring-slate-300' : ''
-          }`}
-          aria-label="アラート"
-        >
-          <Bell className="h-5 w-5" />
-          {alertCount > 0 ? (
-            <span className="absolute -top-1 -right-1 rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-              {alertCount}
-            </span>
-          ) : null}
-        </Link>
-
         <details className="group relative">
           <summary className="flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
-              {(user.name?.[0] || user.email[0]).toUpperCase()}
+              {displayName[0]?.toUpperCase()}
             </span>
-            <span className="hidden sm:block">{user.name || user.email}</span>
+            <span className="hidden sm:block">{displayName}</span>
             <ChevronDown className="h-4 w-4 text-slate-400" />
           </summary>
           <div className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">

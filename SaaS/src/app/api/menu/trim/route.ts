@@ -1,6 +1,6 @@
 
 import { NextResponse } from "next/server";
-import { trimMenuPlanDays } from "@/app/(dashboard)/planning/actions";
+import { trimMenuPlanDays } from "@/app/(chef)/planning/actions";
 
 export async function POST(req: Request) {
   try {

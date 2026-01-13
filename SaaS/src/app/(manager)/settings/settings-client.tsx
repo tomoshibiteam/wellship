@@ -60,7 +60,7 @@ export default function SettingsClient() {
             .map((chef) => ({
               id: chef.id,
               label: `司厨（${chef.name || chef.email}）`,
-              role: 'CHEF',
+              role: 'CHEF' as const,
             })),
         ];
 

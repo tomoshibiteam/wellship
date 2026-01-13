@@ -1,7 +1,7 @@
 'use client';
 
 import { Recipe } from "@prisma/client";
-import { GeneratedDay } from "@/app/(dashboard)/planning/actions";
+import { GeneratedDay } from "@/app/(chef)/planning/actions";
 import { RecipeCard } from "./recipe-card";
 import { SunIcon, CloudIcon, MoonIcon } from "@heroicons/react/24/outline";
 

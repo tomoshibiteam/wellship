@@ -1,6 +1,6 @@
 
 import { NextResponse } from "next/server";
-import { generateProcurementFromLatest } from "@/app/(dashboard)/procurement/actions";
+import { generateProcurementFromLatest } from "@/app/(chef)/procurement/actions";
 
 export async function POST(req: Request) {
   try {
