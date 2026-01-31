@@ -7,30 +7,61 @@ import { PageHeader } from '@/components/page-header';
 import { ErrorBanner } from '@/components/ui/error';
 import { PageLoading } from '@/components/ui/loading';
 import { useManagerSearchParams } from '@/components/manager/use-manager-search-params';
-import { useMockQuery } from '@/components/manager/use-mock-query';
 import { EmptyState, SectionCard, StatusBadge } from '@/components/manager/manager-ui';
 import { Modal } from '@/components/manager/modal';
-import { getManagerVessels } from '@/lib/manager/data';
-import type { Vessel } from '@/lib/manager/types';
+
+type VesselSummary = {
+  id: string;
+  name: string;
+  imoNumber?: string | null;
+  budgetPerDay?: number | null;
+  chefNames: string[];
+  status: 'ok' | 'warn';
+};
 
 export default function VesselsClient() {
-  const { scope, range } = useManagerSearchParams();
-  const { data, isLoading, error, retry } = useMockQuery(
-    () => getManagerVessels(scope, range),
-    [scope, range]
-  );
-  const [vessels, setVessels] = useState<Vessel[]>([]);
+  const { range } = useManagerSearchParams();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [vessels, setVessels] = useState<VesselSummary[]>([]);
   const [query, setQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newCrewSize, setNewCrewSize] = useState('');
-  const [newNote, setNewNote] = useState('');
+  const [newImo, setNewImo] = useState('');
+  const [newBudget, setNewBudget] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (data) {
-      setVessels(data);
-    }
-  }, [data]);
+    let isMounted = true;
+    const load = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const res = await fetch('/api/manager/vessels');
+        if (!res.ok) throw new Error('船舶一覧の取得に失敗しました。');
+        const json = await res.json();
+        const mapped = (json?.vessels ?? []).map((v: any) => ({
+          id: String(v.id),
+          name: v.name,
+          imoNumber: v.imoNumber ?? null,
+          budgetPerDay: v.budgetPerDay ?? null,
+          chefNames: v.chefNames ?? [],
+          status: (v.chefNames ?? []).length > 0 ? 'ok' : 'warn',
+        }));
+        if (isMounted) setVessels(mapped);
+      } catch (err) {
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : '読み込みに失敗しました。');
+        }
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -38,30 +69,40 @@ export default function VesselsClient() {
     return vessels.filter((vessel) => vessel.name.toLowerCase().includes(keyword));
   }, [query, vessels]);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newName.trim()) return;
-    const newVessel: Vessel = {
-      id: `vessel-${Date.now()}`,
-      name: newName.trim(),
-      imoNumber: 'IMO0000000',
-      chefName: '未設定',
-      crewSize: newCrewSize ? Number(newCrewSize) : 0,
-      status: 'warn',
-      metrics: {
-        responseRate: 0,
-        positiveRate: 0,
-        negativeRate: 0,
-        changeRate: 0,
-        lastUpdated: new Date().toISOString(),
-        alerts: 0,
-      },
-      note: newNote.trim() || undefined,
-    };
-    setVessels((prev) => [newVessel, ...prev]);
-    setIsModalOpen(false);
-    setNewName('');
-    setNewCrewSize('');
-    setNewNote('');
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/manager/vessels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newName.trim(),
+          imoNumber: newImo.trim() || null,
+          budgetPerDay: newBudget ? Number(newBudget) : null,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || '追加に失敗しました。');
+      const vessel = json?.vessel;
+      const newVessel: VesselSummary = {
+        id: vessel.id,
+        name: vessel.name,
+        imoNumber: vessel.imoNumber ?? null,
+        budgetPerDay: vessel.budgetPerDay ?? null,
+        chefNames: [],
+        status: 'warn',
+      };
+      setVessels((prev) => [newVessel, ...prev]);
+      setIsModalOpen(false);
+      setNewName('');
+      setNewImo('');
+      setNewBudget('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '追加に失敗しました。');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (isLoading) {
@@ -69,7 +110,7 @@ export default function VesselsClient() {
   }
 
   if (error) {
-    return <ErrorBanner message={error} onRetry={retry} />;
+    return <ErrorBanner message={error} onRetry={() => window.location.reload()} />;
   }
 
   return (
@@ -115,21 +156,23 @@ export default function VesselsClient() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">{vessel.name}</p>
-                    <p className="mt-1 text-xs text-slate-500">担当: {vessel.chefName}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      担当: {vessel.chefNames.length > 0 ? vessel.chefNames.join(', ') : '未設定'}
+                    </p>
                   </div>
                   <StatusBadge status={vessel.status} />
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-slate-600">
                   <div>
-                    <p className="text-slate-400">👍率</p>
+                    <p className="text-slate-400">IMO</p>
                     <p className="text-sm font-semibold text-slate-800">
-                      {Math.round(vessel.metrics.positiveRate * 100)}%
+                      {vessel.imoNumber ?? '未登録'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-slate-400">回答率</p>
+                    <p className="text-slate-400">予算/日</p>
                     <p className="text-sm font-semibold text-slate-800">
-                      {Math.round(vessel.metrics.responseRate * 100)}%
+                      {vessel.budgetPerDay ? `¥${vessel.budgetPerDay.toLocaleString()}` : '未設定'}
                     </p>
                   </div>
                 </div>
@@ -152,22 +195,23 @@ export default function VesselsClient() {
             />
           </label>
           <label className="block text-sm font-medium text-slate-700">
-            乗組員規模レンジ（任意）
+            IMO番号（任意）
             <input
-              type="number"
-              value={newCrewSize}
-              onChange={(event) => setNewCrewSize(event.target.value)}
+              type="text"
+              value={newImo}
+              onChange={(event) => setNewImo(event.target.value)}
               className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none"
-              placeholder="例: 24"
+              placeholder="例: IMO1234567"
             />
           </label>
           <label className="block text-sm font-medium text-slate-700">
-            厨房メモ（任意）
-            <textarea
-              value={newNote}
-              onChange={(event) => setNewNote(event.target.value)}
+            予算/日（任意）
+            <input
+              type="number"
+              value={newBudget}
+              onChange={(event) => setNewBudget(event.target.value)}
               className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none"
-              rows={3}
+              placeholder="例: 1400"
             />
           </label>
           <div className="flex items-center justify-end gap-2">
@@ -181,9 +225,10 @@ export default function VesselsClient() {
             <button
               type="button"
               onClick={handleAdd}
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+              disabled={isSaving}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
-              追加する
+              {isSaving ? '追加中...' : '追加する'}
             </button>
           </div>
         </div>

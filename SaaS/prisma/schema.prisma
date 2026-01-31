@@ -47,9 +47,23 @@ enum UserRole {
   MANAGER
 }
 
+enum UserStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
 enum ExclusionScope {
   CHEF    // 司厨個人が作れない
   VESSEL  // 船の環境で作れない
+}
+
+enum OrderStatus {
+  DRAFT      // 下書き（カート状態）
+  CONFIRMED  // 発注確定
+  SHIPPED    // 出荷済み
+  DELIVERED  // 納品完了
+  CANCELLED  // キャンセル
 }
 
 // ========================================
@@ -66,6 +80,7 @@ model Company {
   users     User[]
   ingredients Ingredient[]
   recipes   Recipe[]
+  auditLogs AuditLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -78,6 +93,7 @@ model Vessel {
 
   // 予算設定 (船会社が設定)
   minBudgetUsagePercent Int @default(90) // 予算消化率の下限（%）デフォルト90%
+  budgetPerDay          Int @default(1400) // 1人1日あたりの予算（円）
 
   // 献立生成デフォルト設定 (司厨が設定)
   defaultSeason         String?  // spring/summer/autumn/winter
@@ -94,6 +110,7 @@ model Vessel {
   procurementAdjustments ProcurementAdjustment[]
   crewMembers CrewMember[]
   recipeExclusions RecipeExclusion[]
+  orders      Order[]  // 発注履歴
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -105,9 +122,14 @@ model User {
   id            String   @id @default(cuid())
   email         String   @unique
   name          String?
+  phone         String?
   passwordHash  String?
   role          UserRole @default(CHEF)
+  status        UserStatus @default(ACTIVE)
   authUserId    String?  @unique
+  lastLoginAt   DateTime?
+  invitedAt     DateTime?
+  disabledAt    DateTime?
 
   // テナント紐付け
   company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -119,11 +141,16 @@ model User {
   // レシピ除外
   recipeExclusions RecipeExclusion[]
 
+  // 監査ログ
+  auditLogsAsActor  AuditLog[] @relation("AuditActor")
+  auditLogsAsTarget AuditLog[] @relation("AuditTarget")
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@index([companyId])
   @@index([role])
+  @@index([status])
 }
 
 model UserVesselMembership {
@@ -152,6 +179,23 @@ model Session {
   @@index([userId])
 }
 
+model AuditLog {
+  id           String   @id @default(cuid())
+  company      Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId    String
+  actorUser    User?   @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorUserId  String?
+  targetUser   User?   @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  targetUserId String?
+  action       String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([companyId])
+  @@index([actorUserId])
+  @@index([targetUserId])
+}
+
 // ========================================
 // 既存モデル（companyId / vesselId 追加）
 // ========================================
@@ -163,17 +207,27 @@ model Ingredient {
   unit              String
   costPerUnit       Float              @default(0)
 
+  // 商社プラットフォーム用フィールド
+  price             Int                @default(0)    // 標準単価（円）
+  isBonus           Boolean            @default(false) // ロス食材（Boost食材）フラグ
+  supplierId        String?            // 仕入れ先ID
+  supplier          Supplier?          @relation(fields: [supplierId], references: [id])
+
   // テナント紐付け
   company           Company?           @relation(fields: [companyId], references: [id], onDelete: Cascade)
   companyId         String?
 
   recipeIngredients RecipeIngredient[]
   procurementAdjustments ProcurementAdjustment[]
+  orderItems        OrderItem[]        // 発注明細
+  supplierProducts  SupplierProduct[]  // この食材に対応するサプライヤー商品
 
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
   @@index([companyId])
+  @@index([supplierId])
+  @@index([isBonus])
 }
 
 model ProcurementAdjustment {
@@ -347,4 +401,131 @@ model RecipeExclusion {
   @@unique([recipeId, vesselId, scope])
   @@index([userId])
   @@index([vesselId])
+}
+
+// ========================================
+// 発注管理（商社プラットフォーム機能）
+// ========================================
+
+model Supplier {
+  id        String       @id @default(cuid())
+  name      String
+  code      String       @unique  // 仕入れ先コード
+  email     String?
+  phone     String?
+  address   String?
+  isActive  Boolean      @default(true)
+
+  // 対応エリア（港名をカンマ区切りで保存、例: "佐世保港,長崎港,福岡港"）
+  deliveryPorts String?
+
+  ingredients Ingredient[]
+  products    SupplierProduct[]
+
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+// サプライヤーが提供する具体的な商品
+// 抽象的な「食材」と、サプライヤーが実際に販売する「商品」を紐付ける
+model SupplierProduct {
+  id            String      @id @default(cuid())
+
+  // サプライヤー
+  supplier      Supplier    @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  supplierId    String
+
+  // 対応する食材（オプション：新規商品は食材マッピングなしで登録可能）
+  ingredient    Ingredient? @relation(fields: [ingredientId], references: [id], onDelete: SetNull)
+  ingredientId  String?
+
+  // 商品情報
+  productName   String      // 商品名（例：「熊本産トマト1kg」）
+  productCode   String?     // 商品コード（サプライヤー側のSKU）
+  description   String?     // 商品説明
+  category      String?     // カテゴリ（野菜、肉、魚、調味料等）
+
+  // 価格・単位
+  price         Int         // 単価（円）
+  unit          String      // 単位（kg, 個, 本, L等）
+  minOrderQty   Float       @default(1)  // 最小発注量
+  maxOrderQty   Float?      // 最大発注量（オプション）
+
+  // 在庫・可用性
+  isAvailable   Boolean     @default(true)  // 現在注文可能か
+  isApproved    Boolean     @default(false) // WELLSHIP本部による承認済みか
+  stockQty      Float?      // 在庫数量（オプション）
+  leadDays      Int         @default(1)     // 配送までの日数
+
+  // 画像（オプション）
+  imageUrl      String?
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([supplierId, productCode])
+  @@index([supplierId])
+  @@index([ingredientId])
+  @@index([category])
+  @@index([isAvailable])
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  orderNumber   String      @unique  // 発注番号（自動採番）
+
+  // 発注元
+  vessel        Vessel      @relation(fields: [vesselId], references: [id], onDelete: Cascade)
+  vesselId      String
+
+  // 金額
+  totalAmount   Int         @default(0)  // 合計金額（円）
+  itemCount     Int         @default(0)  // 品目数
+
+  // ステータス
+  status        OrderStatus @default(DRAFT)
+
+  // 配送情報
+  deliveryDate  DateTime?   // 希望納品日
+  deliveredAt   DateTime?   // 実際の納品日時
+  shippingNote  String?     // 配送メモ
+
+  // 明細
+  items         OrderItem[]
+
+  // タイムスタンプ
+  confirmedAt   DateTime?   // 発注確定日時
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([vesselId])
+  @@index([status])
+  @@index([deliveryDate])
+}
+
+model OrderItem {
+  id            String      @id @default(cuid())
+
+  // 発注
+  order         Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId       String
+
+  // 食材
+  ingredient    Ingredient  @relation(fields: [ingredientId], references: [id])
+  ingredientId  String
+
+  // 数量・金額
+  quantity      Float       // 発注数量
+  unit          String      // 単位（スナップショット）
+  snapshotPrice Int         // 発注時点の単価（円）
+  subtotal      Int         // 小計（snapshotPrice * quantity）
+
+  // Boost食材フラグ（スナップショット）
+  isBonus       Boolean     @default(false)
+
+  createdAt     DateTime    @default(now())
+
+  @@unique([orderId, ingredientId])
+  @@index([orderId])
+  @@index([ingredientId])
 }

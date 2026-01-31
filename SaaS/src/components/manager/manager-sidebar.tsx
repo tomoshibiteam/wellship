@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Ship,
+  ShoppingCart,
+  Store,
 } from 'lucide-react';
 import { ROUTES } from '@/lib/routes';
 
@@ -20,6 +22,18 @@ const navItems = [
     label: '船舶・船員管理',
     description: 'フリート・クルー・カード',
     icon: Ship,
+  },
+  {
+    href: ROUTES.manager.suppliers,
+    label: 'サプライヤー管理',
+    description: '提携業者・商品カタログ',
+    icon: Store,
+  },
+  {
+    href: ROUTES.manager.orders,
+    label: '発注履歴',
+    description: '全船舶の発注状況',
+    icon: ShoppingCart,
   },
 ];
 

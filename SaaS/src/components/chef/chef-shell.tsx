@@ -32,7 +32,7 @@ export function ChefShell({ children, user }: ChefShellProps) {
                         onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
                     />
                     <main className="flex-1 overflow-y-auto px-4 py-6 md:px-6">
-                        <div className="mx-auto w-full max-w-6xl space-y-6">{children}</div>
+                        <div className="mx-auto w-full space-y-6">{children}</div>
                     </main>
                 </div>
             </div>

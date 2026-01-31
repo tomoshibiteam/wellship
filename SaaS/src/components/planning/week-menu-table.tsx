@@ -110,7 +110,7 @@ export function WeekMenuTable({ plan, budget = 1200, onReplaceRecipe }: WeekMenu
                                     {/* Main Row */}
                                     <tr
                                         onClick={() => toggleExpand(globalIdx)}
-                                        className={`cursor-pointer transition hover:bg-sky-50/50 ${isExpanded ? 'bg-sky-50/70' : ''}`}
+                                        className={`cursor-pointer transition hover:bg-slate-50 ${isExpanded ? 'bg-slate-100' : ''}`}
                                     >
                                         <td className="px-3 py-2.5 text-slate-400">
                                             {isExpanded ? (
@@ -151,11 +151,11 @@ export function WeekMenuTable({ plan, budget = 1200, onReplaceRecipe }: WeekMenu
 
                                     {/* Expanded Details - Visual Health Report */}
                                     {isExpanded && (
-                                        <tr className="bg-gradient-to-r from-slate-50 to-sky-50/30">
+                                        <tr className="bg-slate-50/50">
                                             <td colSpan={7} className="px-4 py-5">
                                                 <div className="grid gap-5 lg:grid-cols-4">
                                                     {/* Health Score Visual */}
-                                                    <div className="flex flex-col items-center justify-center rounded-xl border border-sky-100 bg-white p-4 shadow-sm">
+                                                    <div className="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                                                         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Health Score</p>
                                                         <div className="relative flex h-24 w-24 items-center justify-center">
                                                             <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
@@ -184,7 +184,7 @@ export function WeekMenuTable({ plan, budget = 1200, onReplaceRecipe }: WeekMenu
                                                     </div>
 
                                                     {/* Nutrition Breakdown */}
-                                                    <div className="rounded-xl border border-sky-100 bg-white p-4 shadow-sm lg:col-span-2">
+                                                    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-2">
                                                         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">栄養バランス</p>
                                                         <div className="space-y-3">
                                                             {/* Calories */}
@@ -228,7 +228,7 @@ export function WeekMenuTable({ plan, budget = 1200, onReplaceRecipe }: WeekMenu
                                                             </div>
                                                         </div>
                                                         {/* Health Tips */}
-                                                        <div className="mt-4 rounded-lg bg-gradient-to-r from-sky-50 to-teal-50 p-2.5">
+                                                        <div className="mt-4 rounded-lg bg-slate-100 p-2.5">
                                                             <p className="text-xs text-slate-600">
                                                                 {day.totals.protein >= 60 && day.totals.salt <= 7.5 ? '✨ 栄養バランスが理想的です！' :
                                                                     day.totals.salt > 7.5 ? '⚠️ 塩分が高めです。汁物を控えめに。' :
@@ -239,7 +239,7 @@ export function WeekMenuTable({ plan, budget = 1200, onReplaceRecipe }: WeekMenu
                                                     </div>
 
                                                     {/* Cost Analysis */}
-                                                    <div className="rounded-xl border border-sky-100 bg-white p-4 shadow-sm">
+                                                    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                                                         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">コスト分析</p>
                                                         <div className="flex flex-col items-center">
                                                             <span className={`text-3xl font-bold ${day.totals.cost <= budget ? 'text-emerald-600' : day.totals.cost <= budget * 1.1 ? 'text-amber-600' : 'text-rose-600'}`}>
@@ -257,10 +257,10 @@ export function WeekMenuTable({ plan, budget = 1200, onReplaceRecipe }: WeekMenu
                                                 <div className="mt-5 grid gap-4 md:grid-cols-3">
                                                     {(['breakfast', 'lunch', 'dinner'] as const).map((mealKey) => (
                                                         <div key={mealKey} className={`rounded-xl border-2 bg-white p-4 shadow-sm ${mealKey === 'breakfast' ? 'border-amber-200' :
-                                                            mealKey === 'lunch' ? 'border-sky-200' : 'border-indigo-200'
+                                                            mealKey === 'lunch' ? 'border-slate-200' : 'border-indigo-200'
                                                             }`}>
                                                             <h4 className={`mb-3 flex items-center gap-2 text-sm font-bold ${mealKey === 'breakfast' ? 'text-amber-600' :
-                                                                mealKey === 'lunch' ? 'text-sky-600' : 'text-indigo-600'
+                                                                mealKey === 'lunch' ? 'text-slate-600' : 'text-indigo-600'
                                                                 }`}>
                                                                 <span className="text-lg">
                                                                     {mealKey === 'breakfast' ? '🌅' : mealKey === 'lunch' ? '☀️' : '🌙'}
@@ -289,7 +289,7 @@ export function WeekMenuTable({ plan, budget = 1200, onReplaceRecipe }: WeekMenu
                                                                                 e.stopPropagation();
                                                                                 onReplaceRecipe(globalIdx, mealKey, recipeIdx, day.date);
                                                                             }}
-                                                                            className="rounded-lg bg-white px-2 py-1 text-[10px] font-semibold text-slate-500 shadow-sm transition hover:bg-sky-50 hover:text-sky-600"
+                                                                            className="rounded-lg bg-white px-2 py-1 text-[10px] font-semibold text-slate-500 shadow-sm transition hover:bg-slate-100 hover:text-slate-900"
                                                                         >
                                                                             代替
                                                                         </button>
@@ -316,7 +316,7 @@ export function WeekMenuTable({ plan, budget = 1200, onReplaceRecipe }: WeekMenu
                         <button
                             key={i}
                             onClick={() => setCurrentPage(i)}
-                            className={`h-2 rounded-full transition ${i === currentPage ? 'w-6 bg-sky-500' : 'w-2 bg-slate-200 hover:bg-slate-300'
+                            className={`h-2 rounded-full transition ${i === currentPage ? 'w-6 bg-slate-900' : 'w-2 bg-slate-200 hover:bg-slate-300'
                                 }`}
                         />
                     ))}

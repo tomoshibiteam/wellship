@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { ExternalLink, Users } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { SectionCard } from '@/components/manager/manager-ui';
-import { mockCompany } from '@/lib/manager/mock-data';
 import { ErrorBanner } from '@/components/ui/error';
 
 type SwitchTarget = {
@@ -14,8 +13,30 @@ type SwitchTarget = {
   role: 'CHEF' | 'MANAGER';
 };
 
+type AuditLogEntry = {
+  id: string;
+  action: string;
+  createdAt: string;
+  actor: { id: string; name: string } | null;
+  target: { id: string; name: string } | null;
+  metadata?: Record<string, unknown> | null;
+};
+
+const auditLabels: Record<string, string> = {
+  'user.invited': 'ユーザー招待',
+  'user.role_changed': '権限変更',
+  'user.status_changed': 'ステータス変更',
+  'user.vessels_changed': '船舶割当変更',
+  'vessel.created': '船舶追加',
+  'company.updated': '会社情報更新',
+};
+
 export default function SettingsClient() {
-  const [companyName, setCompanyName] = useState(mockCompany.name);
+  const [companyName, setCompanyName] = useState('');
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [companyError, setCompanyError] = useState<string | null>(null);
+  const [companySaving, setCompanySaving] = useState(false);
+  const [companyLoading, setCompanyLoading] = useState(true);
   const isTestEnv = process.env.NODE_ENV !== 'production';
   const [switchTargets, setSwitchTargets] = useState<SwitchTarget[]>([]);
   const [selectedTargetId, setSelectedTargetId] = useState('');
@@ -23,6 +44,9 @@ export default function SettingsClient() {
   const [isSwitching, setIsSwitching] = useState(false);
   const [switchError, setSwitchError] = useState<string | null>(null);
   const hasLoadedRef = useRef(false);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [auditError, setAuditError] = useState<string | null>(null);
+  const [auditLoading, setAuditLoading] = useState(false);
 
   useEffect(() => {
     if (!isTestEnv || hasLoadedRef.current) return;
@@ -86,6 +110,59 @@ export default function SettingsClient() {
     };
   }, [isTestEnv, selectedTargetId]);
 
+  useEffect(() => {
+    let isMounted = true;
+    const loadCompany = async () => {
+      setCompanyLoading(true);
+      setCompanyError(null);
+      try {
+        const res = await fetch('/api/manager/company');
+        if (!res.ok) {
+          throw new Error('会社情報の取得に失敗しました。');
+        }
+        const json = await res.json();
+        if (!isMounted) return;
+        setCompanyName(json?.company?.name ?? '');
+        setCompanyId(json?.company?.id ?? null);
+      } catch (err) {
+        if (isMounted) {
+          setCompanyError(err instanceof Error ? err.message : '会社情報を取得できません。');
+        }
+      } finally {
+        if (isMounted) setCompanyLoading(false);
+      }
+    };
+    loadCompany();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadAudit = async () => {
+      setAuditLoading(true);
+      setAuditError(null);
+      try {
+        const res = await fetch('/api/manager/audit-logs?limit=20');
+        if (!res.ok) throw new Error('監査ログの取得に失敗しました。');
+        const json = await res.json();
+        if (!isMounted) return;
+        setAuditLogs(json?.logs ?? []);
+      } catch (err) {
+        if (isMounted) {
+          setAuditError(err instanceof Error ? err.message : '監査ログを取得できません。');
+        }
+      } finally {
+        if (isMounted) setAuditLoading(false);
+      }
+    };
+    loadAudit();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const targetMap = useMemo(() => {
     return new Map(switchTargets.map((target) => [target.id, target]));
   }, [switchTargets]);
@@ -118,6 +195,32 @@ export default function SettingsClient() {
     }
   };
 
+  const handleSaveCompany = async () => {
+    if (!companyName.trim()) {
+      setCompanyError('会社名を入力してください。');
+      return;
+    }
+    setCompanySaving(true);
+    setCompanyError(null);
+    try {
+      const res = await fetch('/api/manager/company', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: companyName.trim() }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.error || '会社名の更新に失敗しました。');
+      }
+      const json = await res.json();
+      setCompanyName(json?.company?.name ?? companyName.trim());
+    } catch (err) {
+      setCompanyError(err instanceof Error ? err.message : '会社名の更新に失敗しました。');
+    } finally {
+      setCompanySaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -128,6 +231,7 @@ export default function SettingsClient() {
 
       <SectionCard title="会社情報" description="表示名の変更は任意です。">
         <div className="space-y-3">
+          {companyError ? <ErrorBanner message={companyError} /> : null}
           <label className="block text-sm font-medium text-slate-700">
             会社表示名
             <input
@@ -135,14 +239,21 @@ export default function SettingsClient() {
               value={companyName}
               onChange={(event) => setCompanyName(event.target.value)}
               className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-400 focus:outline-none"
+              placeholder="会社名を入力"
+              disabled={companyLoading}
             />
           </label>
           <button
             type="button"
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+            onClick={handleSaveCompany}
+            disabled={companySaving || companyLoading}
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
-            変更を保存
+            {companySaving ? '保存中...' : '変更を保存'}
           </button>
+          {companyId ? (
+            <p className="text-xs text-slate-400">Company ID: {companyId}</p>
+          ) : null}
         </div>
       </SectionCard>
 
@@ -197,6 +308,36 @@ export default function SettingsClient() {
           </div>
         </SectionCard>
       )}
+
+      <SectionCard title="監査ログ" description="直近の権限変更や招待履歴を確認します。">
+        {auditError ? <ErrorBanner message={auditError} /> : null}
+        {auditLoading ? (
+          <p className="text-sm text-slate-500">読み込み中...</p>
+        ) : auditLogs.length === 0 ? (
+          <p className="text-sm text-slate-500">まだ履歴がありません。</p>
+        ) : (
+          <div className="space-y-2">
+            {auditLogs.map((log) => (
+              <div
+                key={log.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                    {auditLabels[log.action] ?? log.action}
+                  </span>
+                  <span>
+                    {log.actor?.name ?? 'システム'} → {log.target?.name ?? '—'}
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-400">
+                  {new Date(log.createdAt).toLocaleString('ja-JP')}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </SectionCard>
 
       <SectionCard title="データ出力" description="MVPではリンクのみ提供します。">
         <div className="flex flex-wrap gap-3">

@@ -5,11 +5,13 @@ import { useEffect, useState } from 'react';
 interface ThanksScreenProps {
     onReset: () => void;
     autoResetSeconds?: number;
+    message?: string;
 }
 
 export function ThanksScreen({
     onReset,
     autoResetSeconds = 5,
+    message = 'フィードバックを送信しました',
 }: ThanksScreenProps) {
     const [countdown, setCountdown] = useState(autoResetSeconds);
 
@@ -18,7 +20,8 @@ export function ThanksScreen({
             setCountdown((prev) => {
                 if (prev <= 1) {
                     clearInterval(timer);
-                    onReset();
+                    // Defer state update to next tick to avoid updating during render
+                    setTimeout(() => onReset(), 0);
                     return 0;
                 }
                 return prev - 1;
@@ -30,14 +33,14 @@ export function ThanksScreen({
 
     return (
         <div className="flex flex-col items-center justify-center text-center">
-            <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-green-500 text-5xl text-white shadow-lg">
+            <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-slate-900 text-5xl text-white shadow-lg">
                 ✓
             </div>
-            <h2 className="text-3xl font-bold text-green-800">
+            <h2 className="text-3xl font-bold text-slate-900">
                 ありがとうございます！
             </h2>
             <p className="mt-4 text-xl text-slate-600">
-                フィードバックを送信しました
+                {message}
             </p>
             <div className="mt-8 rounded-2xl bg-slate-50 px-8 py-4">
                 <p className="text-lg text-slate-600">
@@ -49,7 +52,7 @@ export function ThanksScreen({
             </div>
             <button
                 onClick={onReset}
-                className="mt-6 text-sm text-sky-600 underline hover:text-sky-800"
+                className="mt-6 text-sm text-slate-800 underline hover:text-slate-600"
             >
                 今すぐ戻る
             </button>

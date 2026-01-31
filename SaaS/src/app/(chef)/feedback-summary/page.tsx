@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/page-header";
+import { EmptyState } from "@/components/manager/manager-ui";
 import { getCurrentUser } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { features } from "@/lib/config/features";
@@ -12,22 +13,32 @@ export default async function ChefFeedbackSummaryPage() {
         redirect('/login');
     }
 
-    // 司厨が担当する船舶を取得
-    const supabase = await createSupabaseServerClient();
-    const { data: membership } = await supabase
-        .from("UserVesselMembership")
-        .select("vessel:Vessel(id)")
-        .eq("userId", user.id)
-        .maybeSingle();
-
-    if (!membership) {
-        redirect('/planning');
+    const vesselId = user.vesselIds?.[0];
+    if (!vesselId) {
+        return (
+            <EmptyState
+                title="担当船舶が未登録です"
+                description="会社/船舶が登録されていないため、フィードバック集計を表示できません。管理者に連絡してください。"
+            />
+        );
     }
 
-    const vessel = Array.isArray(membership.vessel)
-        ? membership.vessel[0]
-        : membership.vessel;
-    const vesselId = vessel?.id;
+    const supabase = await createSupabaseServerClient();
+    const { data: vessel } = await supabase
+        .from("Vessel")
+        .select("id")
+        .eq("id", vesselId)
+        .eq("companyId", user.companyId)
+        .maybeSingle();
+
+    if (!vessel) {
+        return (
+            <EmptyState
+                title="担当船舶が見つかりません"
+                description="船舶の登録状況を確認してください。"
+            />
+        );
+    }
     const today = new Date().toISOString().slice(0, 10);
 
     // 過去7日間のフィードバックを取得
@@ -38,7 +49,7 @@ export default async function ChefFeedbackSummaryPage() {
     const { data: feedbacksRaw } = await supabase
         .from("MealFeedback")
         .select("id,date,mealType,satisfaction,volumeFeeling,leftover,comment,photoUrl,createdAt")
-        .eq("vesselId", vesselId ?? "")
+        .eq("vesselId", vesselId)
         .gte("date", startDate)
         .lte("date", today);
 

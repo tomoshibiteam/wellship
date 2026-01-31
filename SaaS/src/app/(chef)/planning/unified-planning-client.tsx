@@ -48,11 +48,11 @@ export function UnifiedPlanningClient({
     return (
         <div className="space-y-4">
             {/* Tab Navigation */}
-            <div className="flex rounded-xl border border-sky-100 bg-white p-1 shadow-sm">
+            <div className="flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
                 <button
                     onClick={() => switchTab('planning')}
                     className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${activeTab === 'planning'
-                        ? 'bg-gradient-to-r from-sky-600 to-teal-500 text-white shadow-md'
+                        ? 'bg-slate-900 text-white shadow-md'
                         : 'text-slate-600 hover:bg-slate-50'
                         }`}
                 >
@@ -61,7 +61,7 @@ export function UnifiedPlanningClient({
                 <button
                     onClick={() => switchTab('procurement')}
                     className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${activeTab === 'procurement'
-                        ? 'bg-gradient-to-r from-sky-600 to-teal-500 text-white shadow-md'
+                        ? 'bg-slate-900 text-white shadow-md'
                         : 'text-slate-600 hover:bg-slate-50'
                         }`}
                 >
@@ -82,6 +82,7 @@ export function UnifiedPlanningClient({
                 <ProcurementGenerator
                     initialStartDate={defaultProcurementStartDate}
                     refreshKey={procurementRefreshKey}
+                    vesselId={vesselId}
                 />
             </div>
         </div>

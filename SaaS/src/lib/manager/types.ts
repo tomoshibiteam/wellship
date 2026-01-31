@@ -93,6 +93,10 @@ export interface ManagerUser {
   role: 'CHEF' | 'MANAGER';
   vessels: string[];
   status: 'active' | 'invited' | 'disabled';
+  phone?: string | null;
+  lastLoginAt?: string | null;
+  invitedAt?: string | null;
+  disabledAt?: string | null;
 }
 
 export interface ManagerCompany {

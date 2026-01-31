@@ -11,6 +11,7 @@ import { getVesselDetail } from '@/lib/manager/data';
 
 const tabs = [
   { id: 'overview', label: '概要' },
+  { id: 'crew', label: '船員管理' },
   { id: 'owners', label: '担当者' },
   { id: 'notes', label: 'メモ' },
 ] as const;
@@ -27,12 +28,83 @@ export default function VesselDetailClient({ vesselId }: { vesselId: string }) {
   const [note, setNote] = useState('');
   const [saved, setSaved] = useState(false);
 
+  // Crew management state
+  const [crewMembers, setCrewMembers] = useState<Array<{ id: string; name: string; cardCode: string }>>([]);
+  const [isLoadingCrew, setIsLoadingCrew] = useState(false);
+  const [newCrewName, setNewCrewName] = useState('');
+  const [isAddingCrew, setIsAddingCrew] = useState(false);
+
   const detail = useMemo(() => data, [data]);
   useEffect(() => {
     if (detail) {
       setNote(detail.notes);
     }
   }, [detail]);
+
+  // Fetch crew members when crew tab is active
+  useEffect(() => {
+    if (activeTab === 'crew') {
+      fetchCrewMembers();
+    }
+  }, [activeTab, vesselId]);
+
+  const fetchCrewMembers = async () => {
+    setIsLoadingCrew(true);
+    try {
+      const res = await fetch(`/api/crew/list?vesselId=${vesselId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCrewMembers(data.crewMembers || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch crew members:', error);
+    } finally {
+      setIsLoadingCrew(false);
+    }
+  };
+
+  const handleAddCrew = async () => {
+    if (!newCrewName.trim()) return;
+
+    setIsAddingCrew(true);
+    try {
+      const res = await fetch('/api/crew/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vesselId,
+          name: newCrewName.trim(),
+        }),
+      });
+
+      if (res.ok) {
+        setNewCrewName('');
+        await fetchCrewMembers();
+      }
+    } catch (error) {
+      console.error('Failed to add crew member:', error);
+    } finally {
+      setIsAddingCrew(false);
+    }
+  };
+
+  const handleDeleteCrew = async (crewId: string) => {
+    if (!confirm('この船員を削除しますか？')) return;
+
+    try {
+      const res = await fetch('/api/crew/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ crewId }),
+      });
+
+      if (res.ok) {
+        await fetchCrewMembers();
+      }
+    } catch (error) {
+      console.error('Failed to delete crew member:', error);
+    }
+  };
 
   if (isLoading) {
     return <PageLoading message="船舶詳細を読み込み中..." />;
@@ -72,11 +144,10 @@ export default function VesselDetailClient({ vesselId }: { vesselId: string }) {
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
-              activeTab === tab.id
-                ? 'bg-slate-900 text-white'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
+            className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${activeTab === tab.id
+              ? 'bg-slate-900 text-white'
+              : 'text-slate-600 hover:bg-slate-100'
+              }`}
           >
             {tab.label}
           </button>
@@ -122,6 +193,78 @@ export default function VesselDetailClient({ vesselId }: { vesselId: string }) {
             </ol>
           </SectionCard>
         </div>
+      )}
+
+      {activeTab === 'crew' && (
+        <SectionCard title="船員管理" description="この船舶に所属する船員を管理します。">
+          <div className="space-y-4">
+            {/* Add crew form */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newCrewName}
+                onChange={(e) => setNewCrewName(e.target.value)}
+                placeholder="船員名を入力"
+                className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddCrew();
+                  }
+                }}
+              />
+              <button
+                onClick={handleAddCrew}
+                disabled={!newCrewName.trim() || isAddingCrew}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+              >
+                {isAddingCrew ? '追加中...' : '追加'}
+              </button>
+            </div>
+
+            {/* Crew list */}
+            {isLoadingCrew ? (
+              <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+                読み込み中...
+              </div>
+            ) : crewMembers.length === 0 ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-8 text-center">
+                <p className="text-sm text-amber-700">
+                  ⚠️ 船員が登録されていません。<br />
+                  <span className="text-xs text-amber-600">上のフォームから船員を追加してください。</span>
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {crewMembers.map((crew) => (
+                  <div
+                    key={crew.id}
+                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-lg">
+                        👤
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{crew.name}</p>
+                        <p className="text-xs text-slate-500">ID: {crew.cardCode}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteCrew(crew.id)}
+                      className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
+                    >
+                      削除
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <p className="text-xs text-slate-500">
+              💡 ヒント: 船員を追加すると、司厨側のフィードバック画面で選択できるようになります。
+            </p>
+          </div>
+        </SectionCard>
       )}
 
       {activeTab === 'owners' && (

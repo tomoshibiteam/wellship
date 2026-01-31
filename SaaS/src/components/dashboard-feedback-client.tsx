@@ -1,13 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { NfcScanner } from '@/components/feedback/nfc-scanner';
 import { FeedbackInputForm } from '@/components/feedback/feedback-input-form';
 import { ThanksScreen } from '@/components/feedback/thanks-screen';
 import { ErrorBanner } from '@/components/ui/error';
+import { safeJsonRequest } from '@/lib/offline/retry-queue';
+import { clearDraft } from '@/lib/offline/draft-storage';
 
-type Step = 'setup' | 'scan' | 'input' | 'thanks';
-
+type Step = 'setup' | 'select' | 'input' | 'thanks';
 
 interface CrewMember {
     id: string;
@@ -51,13 +51,14 @@ export function DashboardFeedbackClient({
 }: DashboardFeedbackClientProps) {
     const [step, setStep] = useState<Step>('setup');
     const [crewMember, setCrewMember] = useState<CrewMember | null>(null);
+    const [crewMembers, setCrewMembers] = useState<CrewMember[]>([]);
     const [menuPlan, setMenuPlan] = useState<MenuPlan | null>(null);
     const [isLoadingMenu, setIsLoadingMenu] = useState(true);
+    const [isLoadingCrew, setIsLoadingCrew] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [showManualInput, setShowManualInput] = useState(false);
-    const [manualCardCode, setManualCardCode] = useState('');
     const [feedbackCount, setFeedbackCount] = useState(0);
+    const [thanksMessage, setThanksMessage] = useState('フィードバックを送信しました');
 
     const currentMealType = guessMealType();
 
@@ -87,9 +88,27 @@ export function DashboardFeedbackClient({
         fetchTodayMenu();
     }, [vesselId, currentMealType]);
 
+    // 船員リストを取得
+    const fetchCrewMembers = async () => {
+        setIsLoadingCrew(true);
+        try {
+            const res = await fetch(`/api/crew/list?vesselId=${vesselId}`);
+            if (res.ok) {
+                const data = await res.json();
+                setCrewMembers(data.crewMembers || []);
+            }
+        } catch (err) {
+            console.error('Failed to fetch crew members:', err);
+            setError('船員リストの取得に失敗しました。');
+        } finally {
+            setIsLoadingCrew(false);
+        }
+    };
+
     // 司厨がセットアップ完了を押したら
-    const handleStartFeedback = () => {
-        setStep('scan');
+    const handleStartFeedback = async () => {
+        await fetchCrewMembers();
+        setStep('select');
         setFeedbackCount(0);
     };
 
@@ -97,7 +116,6 @@ export function DashboardFeedbackClient({
     const handleEndFeedback = async () => {
         if (menuPlan && menuPlan.id !== 'dummy-menu') {
             try {
-                // 締めるAPIを呼び出し
                 await fetch('/api/feedback/close-feedback', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -110,35 +128,12 @@ export function DashboardFeedbackClient({
         setStep('setup');
     };
 
-    const handleScan = useCallback(async (cardCode: string) => {
+    // 船員カードをクリック
+    const handleSelectCrew = (crew: CrewMember) => {
+        setCrewMember(crew);
+        setStep('input');
         setError(null);
-
-        try {
-            const res = await fetch('/api/crew/lookup', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cardCode }),
-            });
-
-            const data = await res.json();
-
-            if (!res.ok || data.error) {
-                setError(data.error || 'カードが認識できませんでした。');
-                return;
-            }
-
-            if (data.crewMember.vesselId !== vesselId) {
-                setError('このカードは別の船舶の船員です。');
-                return;
-            }
-
-            setCrewMember(data.crewMember);
-            setStep('input');
-        } catch (err) {
-            console.error('Scan error:', err);
-            setError('カードの読み取りに失敗しました。');
-        }
-    }, [vesselId]);
+    };
 
     const handleSubmit = async (data: {
         satisfaction: number;
@@ -165,10 +160,10 @@ export function DashboardFeedbackClient({
                 }
             }
 
-            const res = await fetch('/api/feedback/submit', {
+            const result = await safeJsonRequest({
+                url: '/api/feedback/submit',
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+                body: {
                     crewMemberId: crewMember.id,
                     menuPlanId: menuPlan?.id || null,
                     satisfaction: data.satisfaction,
@@ -176,16 +171,28 @@ export function DashboardFeedbackClient({
                     leftover: data.leftover,
                     photoUrl,
                     reasonTags: data.reasonTags,
-                }),
+                },
+                feature: 'feedback',
             });
 
-            const result = await res.json();
-
-            if (!res.ok || result.error) {
-                setError(result.error || '送信に失敗しました。');
+            if (result.queued) {
+                setThanksMessage('通信が不安定なため送信を保留しました');
+                const draftKey = `wellship_feedback_draft:${vesselId}:${crewMember.id}:${menuPlan?.id ?? currentMealType}`;
+                clearDraft(draftKey);
+                setFeedbackCount((prev) => prev + 1);
+                setStep('thanks');
                 return;
             }
 
+            const json = await result.response?.json().catch(() => ({}));
+            if (!result.ok || json?.error) {
+                setError(json?.error || '送信に失敗しました。');
+                return;
+            }
+
+            setThanksMessage('フィードバックを送信しました');
+            const draftKey = `wellship_feedback_draft:${vesselId}:${crewMember.id}:${menuPlan?.id ?? currentMealType}`;
+            clearDraft(draftKey);
             setFeedbackCount(prev => prev + 1);
             setStep('thanks');
         } catch (err) {
@@ -197,18 +204,10 @@ export function DashboardFeedbackClient({
     };
 
     const handleReset = useCallback(() => {
-        setStep('scan');
+        setStep('select');
         setCrewMember(null);
         setError(null);
     }, []);
-
-    const handleManualSubmit = async () => {
-        if (manualCardCode.trim()) {
-            await handleScan(manualCardCode.trim());
-            setManualCardCode('');
-            setShowManualInput(false);
-        }
-    };
 
     // ===== セットアップ画面 =====
     if (step === 'setup') {
@@ -216,7 +215,7 @@ export function DashboardFeedbackClient({
             <div className="flex flex-col items-center py-6">
                 {/* ヘッダー */}
                 <div className="mb-6 flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-sky-600 to-teal-500 shadow-lg">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-white shadow-lg">
                         <span className="text-2xl">🚢</span>
                     </div>
                     <div>
@@ -226,7 +225,7 @@ export function DashboardFeedbackClient({
                 </div>
 
                 {/* 食事情報 */}
-                <div className="mb-6 w-full max-w-md rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 to-teal-50 p-6 text-center shadow">
+                <div className="mb-6 w-full max-w-md rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center shadow-sm">
                     <div className="mb-3 text-4xl">
                         {mealTypeEmojis[currentMealType]}
                     </div>
@@ -272,23 +271,23 @@ export function DashboardFeedbackClient({
                 {/* 開始ボタン */}
                 <button
                     onClick={handleStartFeedback}
-                    className="w-full max-w-md rounded-xl bg-gradient-to-r from-sky-600 to-teal-500 py-4 text-lg font-bold text-white shadow-lg transition hover:shadow-xl"
+                    className="w-full max-w-md rounded-xl bg-slate-900 py-4 text-lg font-bold text-white shadow-lg transition hover:bg-slate-800 hover:shadow-xl"
                 >
                     🍽️ フィードバック収集を開始
                 </button>
 
                 <p className="mt-3 text-sm text-slate-500">
-                    開始するとNFCカードかざし画面に移行します
+                    開始すると船員選択画面に移行します
                 </p>
             </div>
         );
     }
 
-    // ===== NFC/入力/Thanks画面 =====
+    // ===== 船員選択/入力/Thanks画面 =====
     return (
         <div className="flex flex-col items-center py-4">
             {/* ヘッダー（収集中） */}
-            <div className="mb-4 flex w-full max-w-md items-center justify-between">
+            <div className="mb-4 flex w-full max-w-2xl items-center justify-between">
                 <div className="flex items-center gap-2">
                     <span className="text-lg">{mealTypeEmojis[currentMealType]}</span>
                     <span className="font-medium text-slate-700">
@@ -320,50 +319,37 @@ export function DashboardFeedbackClient({
             )}
 
             {/* Steps */}
-            {step === 'scan' && (
-                <div className="flex flex-col items-center">
-                    <NfcScanner onScan={handleScan} isActive={step === 'scan' && !showManualInput} />
-
-                    {showManualInput ? (
-                        <div className="mt-4 flex flex-col items-center gap-2">
-                            <input
-                                type="text"
-                                value={manualCardCode}
-                                onChange={(e) => setManualCardCode(e.target.value)}
-                                placeholder="CREW-SAKURA-001"
-                                className="w-56 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                                autoFocus
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        handleManualSubmit();
-                                    }
-                                }}
-                            />
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={handleManualSubmit}
-                                    className="rounded-lg bg-sky-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-sky-700"
-                                >
-                                    確認
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setShowManualInput(false);
-                                        setManualCardCode('');
-                                    }}
-                                    className="rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-sm text-slate-600 shadow-sm hover:bg-slate-50"
-                                >
-                                    キャンセル
-                                </button>
-                            </div>
+            {step === 'select' && (
+                <div className="w-full max-w-2xl">
+                    <h3 className="mb-4 text-center text-lg font-semibold text-slate-800">
+                        👥 船員を選択してください
+                    </h3>
+                    {isLoadingCrew ? (
+                        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+                            読み込み中...
+                        </div>
+                    ) : crewMembers.length === 0 ? (
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-8 text-center">
+                            <p className="text-sm text-amber-700">
+                                ⚠️ 船員が登録されていません。<br />
+                                <span className="text-xs text-amber-600">本部管理画面から船員を登録してください。</span>
+                            </p>
                         </div>
                     ) : (
-                        <button
-                            onClick={() => setShowManualInput(true)}
-                            className="mt-4 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-600 shadow-sm hover:bg-slate-50"
-                        >
-                            📝 手入力（デモ用）
-                        </button>
+                        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+                            {crewMembers.map((crew) => (
+                                <button
+                                    key={crew.id}
+                                    onClick={() => handleSelectCrew(crew)}
+                                    className="flex flex-col items-center gap-2 rounded-xl border-2 border-slate-200 bg-white p-4 transition hover:border-slate-900 hover:bg-slate-50 hover:shadow-md"
+                                >
+                                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-2xl">
+                                        👤
+                                    </div>
+                                    <span className="text-sm font-medium text-slate-800">{crew.name}</span>
+                                </button>
+                            ))}
+                        </div>
                     )}
                 </div>
             )}
@@ -372,12 +358,13 @@ export function DashboardFeedbackClient({
                 <FeedbackInputForm
                     crewName={crewMember.name}
                     menuName={menuPlan?.recipes?.map(r => r.name).join('、') || '本日のメニュー'}
+                    draftKey={`wellship_feedback_draft:${vesselId}:${crewMember.id}:${menuPlan?.id ?? currentMealType}`}
                     onSubmit={handleSubmit}
                     isSubmitting={isSubmitting}
                 />
             )}
 
-            {step === 'thanks' && <ThanksScreen onReset={handleReset} />}
+            {step === 'thanks' && <ThanksScreen onReset={handleReset} message={thanksMessage} />}
         </div>
     );
 }

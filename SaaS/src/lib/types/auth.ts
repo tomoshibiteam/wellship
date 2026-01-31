@@ -1,6 +1,6 @@
 // 認証・テナント関連の型定義
 
-export type UserRole = 'CHEF' | 'MANAGER';
+export type UserRole = 'CHEF' | 'MANAGER' | 'SUPPLIER';
 
 export interface SessionUser {
   id: string;

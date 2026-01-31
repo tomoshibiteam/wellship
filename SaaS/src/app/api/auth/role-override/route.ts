@@ -9,14 +9,15 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: '認証が必要です' }, { status: 401 });
     }
 
-    if (process.env.NODE_ENV === 'production' || user.email.toLowerCase() !== TEST_ADMIN_EMAIL) {
+    if (process.env.NODE_ENV === 'production') {
         return NextResponse.json({ error: '権限がありません' }, { status: 403 });
     }
+    // if (user.email.toLowerCase() !== TEST_ADMIN_EMAIL) { ... }
 
     const body = await request.json().catch(() => ({}));
     const role = body?.role;
-    if (role !== 'CHEF' && role !== 'MANAGER' && role !== null) {
-        return NextResponse.json({ error: 'role は CHEF / MANAGER / null のみ対応です' }, { status: 400 });
+    if (role !== 'CHEF' && role !== 'MANAGER' && role !== 'SUPPLIER' && role !== null) {
+        return NextResponse.json({ error: 'role は CHEF / MANAGER / SUPPLIER / null のみ対応です' }, { status: 400 });
     }
 
     const response = NextResponse.json({ success: true });

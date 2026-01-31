@@ -8,6 +8,8 @@ type SupabaseUserRow = {
     email: string;
     name: string | null;
     role: UserRole;
+    status?: 'ACTIVE' | 'INVITED' | 'DISABLED' | null;
+    lastLoginAt?: string | null;
     companyId: string;
     authUserId: string | null;
     vesselMemberships?: { vesselId: string }[] | null;
@@ -28,7 +30,9 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
 
     const { data: user, error } = await supabase
         .from('User')
-        .select('id,email,name,role,companyId,authUserId,vesselMemberships:UserVesselMembership(vesselId)')
+        .select(
+            'id,email,name,role,status,lastLoginAt,companyId,authUserId,vesselMemberships:UserVesselMembership(vesselId)',
+        )
         .or(`authUserId.eq.${authUser.id},email.eq.${authUser.email}`)
         .maybeSingle<SupabaseUserRow>();
 
@@ -43,115 +47,11 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     }
 
     if (!user) {
-        const companySlug = 'demo-shipping';
-        let companyId = 'company-demo';
-        const { data: existingCompany, error: companyError } = await supabase
-            .from('Company')
-            .select('id')
-            .eq('slug', companySlug)
-            .maybeSingle();
-        if (companyError) {
-            console.error('Failed to fetch company', companyError);
-            return null;
-        }
-        if (existingCompany?.id) {
-            companyId = existingCompany.id;
-        } else {
-            const { error: insertCompanyError } = await supabase.from('Company').insert({
-                id: companyId,
-                name: 'デモ船会社',
-                slug: companySlug,
-            });
-            if (insertCompanyError) {
-                console.error('Failed to create company', insertCompanyError);
-                return null;
-            }
-        }
+        return null;
+    }
 
-        const vesselId = 'vessel-sakura';
-        const { data: existingVessel, error: vesselError } = await supabase
-            .from('Vessel')
-            .select('id')
-            .eq('id', vesselId)
-            .maybeSingle();
-        if (vesselError) {
-            console.error('Failed to fetch vessel', vesselError);
-            return null;
-        }
-        if (!existingVessel) {
-            const { error: insertVesselError } = await supabase.from('Vessel').insert({
-                id: vesselId,
-                name: '桜丸',
-                imoNumber: 'IMO1234567',
-                companyId,
-            });
-            if (insertVesselError) {
-                console.error('Failed to create vessel', insertVesselError);
-                return null;
-            }
-        }
-
-        const fallbackName =
-            (authUser.user_metadata?.name as string | undefined) ||
-            authUser.email.split('@')[0];
-
-        const { data: created, error: createError } = await supabase
-            .from('User')
-            .insert({
-                email: authUser.email,
-                name: fallbackName,
-                role: 'CHEF',
-                companyId,
-                authUserId: authUser.id,
-            })
-            .select('id,email,name,role,companyId')
-            .single<SupabaseUserRow>();
-
-        if (createError || !created) {
-            console.error('Failed to create user', {
-                message: createError?.message,
-                details: createError?.details,
-                hint: createError?.hint,
-                code: createError?.code,
-            });
-            if (createError?.code === '23505') {
-                const { data: existingUser, error: fetchUserError } = await supabase
-                    .from('User')
-                    .select('id,email,name,role,companyId')
-                    .eq('email', authUser.email)
-                    .maybeSingle<SupabaseUserRow>();
-                if (fetchUserError || !existingUser) {
-                    console.error('Failed to fetch existing user', fetchUserError);
-                    return null;
-                }
-                return {
-                    id: existingUser.id,
-                    email: existingUser.email,
-                    name: existingUser.name,
-                    role: existingUser.role as UserRole,
-                    companyId: existingUser.companyId,
-                    vesselIds: [],
-                };
-            }
-            return null;
-        }
-
-        const { error: membershipError } = await supabase.from('UserVesselMembership').insert({
-            userId: created.id,
-            vesselId,
-        });
-        if (membershipError) {
-            console.error('Failed to create vessel membership', membershipError);
-        }
-
-        return {
-            id: created.id,
-            email: created.email,
-            name: created.name,
-            role: created.role as UserRole,
-            companyId: created.companyId,
-            vesselIds: [vesselId],
-        };
+    if (user.status === 'DISABLED') {
+        return null;
     }
 
     if (!user.authUserId) {
@@ -161,27 +61,28 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
             .eq('id', user.id);
     }
 
-    const resolveVesselIds = async (
-        targetUserId: string,
-        memberships?: { vesselId: string }[] | null
-    ) => {
-        const ids = memberships?.map((m) => m.vesselId) ?? [];
-        if (ids.length === 0) {
-            const fallbackVesselId = 'vessel-sakura';
-            const { error: membershipError } = await supabase.from('UserVesselMembership').insert({
-                userId: targetUserId,
-                vesselId: fallbackVesselId,
-            });
-            if (membershipError) {
-                console.error('Failed to backfill vessel membership', membershipError);
-            } else {
-                ids.push(fallbackVesselId);
-            }
+    const shouldActivate = user.status === 'INVITED';
+    const shouldUpdateLogin =
+        !user.lastLoginAt ||
+        Date.now() - new Date(user.lastLoginAt).getTime() > 1000 * 60 * 60 * 6;
+    if (shouldActivate || shouldUpdateLogin) {
+        const updatePayload: Record<string, string | null> = {
+            lastLoginAt: new Date().toISOString(),
+        };
+        if (shouldActivate) {
+            updatePayload.status = 'ACTIVE';
+            updatePayload.disabledAt = null;
         }
-        return ids;
-    };
+        await supabase
+            .from('User')
+            .update(updatePayload)
+            .eq('id', user.id);
+    }
 
-    const vesselIds = await resolveVesselIds(user.id, user.vesselMemberships);
+    const resolveVesselIds = (memberships?: { vesselId: string }[] | null) =>
+        memberships?.map((m) => m.vesselId) ?? [];
+
+    const vesselIds = resolveVesselIds(user.vesselMemberships);
 
     const cookieStore = await cookies();
     const allowImpersonation = process.env.NODE_ENV !== 'production' && user.role === 'MANAGER';
@@ -199,10 +100,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
             targetUser.companyId === user.companyId &&
             (targetUser.role === 'CHEF' || targetUser.role === 'MANAGER')
         ) {
-            const targetVesselIds = await resolveVesselIds(
-                targetUser.id,
-                targetUser.vesselMemberships
-            );
+            const targetVesselIds = resolveVesselIds(targetUser.vesselMemberships);
             return {
                 id: targetUser.id,
                 email: targetUser.email,
@@ -215,13 +113,14 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     }
 
     const baseRole = user.role as UserRole;
-    const normalizedEmail = user.email.toLowerCase();
+    // const normalizedEmail = user.email.toLowerCase();
     const allowRoleOverride =
-        process.env.NODE_ENV !== 'production' && normalizedEmail === 'wataru.1998.0606@gmail.com';
+        process.env.NODE_ENV !== 'production';
+    // normalizedEmail === 'wataru.1998.0606@gmail.com';
     let resolvedRole = baseRole;
     if (allowRoleOverride) {
         const override = cookieStore.get('role_override')?.value;
-        if (override === 'CHEF' || override === 'MANAGER') {
+        if (override === 'CHEF' || override === 'MANAGER' || override === 'SUPPLIER') {
             resolvedRole = override;
         }
     }
@@ -264,4 +163,3 @@ export async function requireRole(allowedRoles: UserRole[]): Promise<SessionUser
 export function getDefaultRedirect(role: UserRole): string {
     return getDefaultRouteForRole(role);
 }
-

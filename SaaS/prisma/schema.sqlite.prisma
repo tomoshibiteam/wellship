@@ -48,6 +48,12 @@ enum UserRole {
   MANAGER
 }
 
+enum UserStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
 enum ExclusionScope {
   CHEF    // 司厨個人が作れない
   VESSEL  // 船の環境で作れない
@@ -67,6 +73,7 @@ model Company {
   users     User[]
   ingredients Ingredient[]
   recipes   Recipe[]
+  auditLogs AuditLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -106,8 +113,13 @@ model User {
   id            String   @id @default(cuid())
   email         String   @unique
   name          String?
+  phone         String?
   passwordHash  String?
   role          UserRole @default(CHEF)
+  status        UserStatus @default(ACTIVE)
+  lastLoginAt   DateTime?
+  invitedAt     DateTime?
+  disabledAt    DateTime?
 
   // テナント紐付け
   company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -119,11 +131,16 @@ model User {
   // レシピ除外
   recipeExclusions RecipeExclusion[]
 
+  // 監査ログ
+  auditLogsAsActor  AuditLog[] @relation("AuditActor")
+  auditLogsAsTarget AuditLog[] @relation("AuditTarget")
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@index([companyId])
   @@index([role])
+  @@index([status])
 }
 
 model UserVesselMembership {
@@ -150,6 +167,23 @@ model Session {
   createdAt    DateTime @default(now())
 
   @@index([userId])
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  company      Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId    String
+  actorUser    User?   @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorUserId  String?
+  targetUser   User?   @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  targetUserId String?
+  action       String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([companyId])
+  @@index([actorUserId])
+  @@index([targetUserId])
 }
 
 // ========================================

@@ -23,8 +23,8 @@ export function AppShell({ children, user }: AppShellProps) {
   const router = useRouter();
   const canRoleSwitch =
     !!user &&
-    process.env.NODE_ENV !== 'production' &&
-    user.email.toLowerCase() === 'wataru.1998.0606@gmail.com';
+    process.env.NODE_ENV !== 'production';
+  // user.email.toLowerCase() === 'wataru.1998.0606@gmail.com';
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'production') return;
@@ -51,7 +51,9 @@ export function AppShell({ children, user }: AppShellProps) {
       const target =
         role === 'CHEF'
           ? '/recipes'
-          : '/manager/dashboard?scope=all&range=7d';
+          : role === 'MANAGER'
+            ? '/manager/dashboard?scope=all&range=7d'
+            : '/app/supplier/products';
       router.push(target);
       router.refresh();
     } finally {
@@ -121,8 +123,8 @@ export function AppShell({ children, user }: AppShellProps) {
                       onClick={() => switchRole('CHEF')}
                       disabled={isSwitchingRole || user.role === 'CHEF'}
                       className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${user.role === 'CHEF'
-                          ? 'bg-sky-600 text-white'
-                          : 'text-slate-600 hover:bg-sky-50'
+                        ? 'bg-sky-600 text-white'
+                        : 'text-slate-600 hover:bg-sky-50'
                         }`}
                     >
                       司厨
@@ -132,17 +134,29 @@ export function AppShell({ children, user }: AppShellProps) {
                       onClick={() => switchRole('MANAGER')}
                       disabled={isSwitchingRole || user.role === 'MANAGER'}
                       className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${user.role === 'MANAGER'
-                          ? 'bg-sky-600 text-white'
-                          : 'text-slate-600 hover:bg-sky-50'
+                        ? 'bg-sky-600 text-white'
+                        : 'text-slate-600 hover:bg-sky-50'
                         }`}
                     >
                       本部
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => switchRole('SUPPLIER')}
+                      disabled={isSwitchingRole || user.role === 'SUPPLIER'}
+                      className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${user.role === 'SUPPLIER'
+                        ? 'bg-sky-600 text-white'
+                        : 'text-slate-600 hover:bg-sky-50'
+                        }`}
+                    >
+                      業者
                     </button>
                   </div>
                 )}
                 <span className="hidden rounded-full bg-sky-100 px-3 py-1.5 text-[11px] font-semibold text-sky-700 sm:inline">
                   {user.role === 'CHEF' && '👨‍🍳 現場側(司厨)'}
                   {user.role === 'MANAGER' && '🏢 管理側(本部)'}
+                  {user.role === 'SUPPLIER' && '🏪 サプライヤー'}
                 </span>
                 <div className="flex items-center gap-2 rounded-lg border border-sky-100 bg-white px-3 py-1.5 shadow-sm">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-sky-600 to-teal-500 text-sm font-bold text-white">

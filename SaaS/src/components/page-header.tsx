@@ -6,11 +6,11 @@ type PageHeaderProps = {
 
 export function PageHeader({ title, description, badge }: PageHeaderProps) {
   return (
-    <div className="rounded-2xl border border-sky-100 bg-white/90 px-5 py-4 shadow-[0_12px_32px_rgba(14,94,156,0.06)]">
+    <div className="rounded-2xl border border-slate-200 bg-white/90 px-5 py-4 shadow-[0_12px_32px_rgba(0,0,0,0.06)]">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
         {badge ? (
-          <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
             {badge}
           </span>
         ) : null}

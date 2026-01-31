@@ -77,18 +77,18 @@ export function NfcScanner({ onScan, isActive }: NfcScannerProps) {
     return (
         <div className="flex flex-col items-center">
             {/* NFC Icon Area */}
-            <div className="relative flex h-48 w-48 items-center justify-center rounded-2xl border-3 border-sky-200 bg-gradient-to-br from-sky-50 to-teal-50 shadow-inner">
+            <div className="relative flex h-48 w-48 items-center justify-center rounded-2xl border-3 border-slate-200 bg-slate-50 shadow-inner">
                 {/* Animated NFC Icon */}
                 <div className="relative">
                     {/* Pulse rings */}
                     {isReading && (
                         <>
-                            <div className="absolute inset-0 -m-6 animate-ping rounded-full border-3 border-sky-300 opacity-20" style={{ animationDuration: '2s' }} />
-                            <div className="absolute inset-0 -m-10 animate-ping rounded-full border-3 border-sky-300 opacity-10" style={{ animationDuration: '2s', animationDelay: '0.5s' }} />
+                            <div className="absolute inset-0 -m-6 animate-ping rounded-full border-3 border-slate-400 opacity-20" style={{ animationDuration: '2s' }} />
+                            <div className="absolute inset-0 -m-10 animate-ping rounded-full border-3 border-slate-300 opacity-10" style={{ animationDuration: '2s', animationDelay: '0.5s' }} />
                         </>
                     )}
                     {/* NFC Symbol */}
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-teal-500 shadow-lg">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-900 shadow-lg">
                         <svg
                             className="h-10 w-10 text-white"
                             viewBox="0 0 24 24"

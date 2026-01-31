@@ -479,6 +479,9 @@ export async function generateMenuPlan(input: GenerateRequest): Promise<Generate
   }
   const userId = user?.id;
   const vesselId = user?.vesselIds?.[0]; // 最初の船を対象とする
+  if (!vesselId) {
+    throw new Error("担当船舶が設定されていません。");
+  }
 
   // 除外レシピIDを取得 - 一時的に無効化
   const excludeIds: string[] = [];
@@ -618,13 +621,18 @@ export async function generateMenuPlan(input: GenerateRequest): Promise<Generate
   // 古い献立を削除
   if (targetDates.length > 0) {
     const dateList = targetDates.map((d) => `"${d}"`).join(",");
-    await supabase.from("MenuPlan").delete().not("date", "in", `(${dateList})`);
+    await supabase
+      .from("MenuPlan")
+      .delete()
+      .eq("vesselId", vesselId)
+      .not("date", "in", `(${dateList})`);
   }
 
   let generated: GeneratedDay[] | null = null;
 
   if (features.aiProvider === "dify") {
     try {
+      console.log("🚀 Dify献立生成を開始...", { days, crewCount: input.crewCount, budget: input.budget });
       generated = await generateMenuWithDify(
         recipes,
         days,
@@ -634,8 +642,13 @@ export async function generateMenuPlan(input: GenerateRequest): Promise<Generate
         startDate,
         input.constraints
       );
+      console.log("✅ Dify献立生成完了:", {
+        生成日数: generated?.length ?? 0,
+        最初の日付: generated?.[0]?.date ?? 'N/A',
+        最後の日付: generated?.[generated.length - 1]?.date ?? 'N/A',
+      });
     } catch (error) {
-      console.error("Dify menu generation error:", error);
+      console.error("❌ Dify menu generation error:", error);
       throw new Error("Dify献立生成に失敗しました。");
     }
   } else {
@@ -677,7 +690,7 @@ export async function generateMenuPlan(input: GenerateRequest): Promise<Generate
           healthScore: day.healthScore,
           crewCount: input.crewCount,
           budgetPerPerson: input.budget,
-          vesselId: vesselId ?? null,
+          vesselId,
         },
         { onConflict: "id" },
       );
@@ -703,6 +716,14 @@ export async function swapMenuRecipe(params: {
   oldRecipeId: string;
   newRecipeId: string;
 }) {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error("認証が必要です。");
+  }
+  const vesselId = user.vesselIds?.[0];
+  if (!vesselId) {
+    throw new Error("担当船舶が設定されていません。");
+  }
   const supabase = await createSupabaseServerClient();
   const id = `plan-${params.date}-${params.mealType}`;
 
@@ -712,6 +733,7 @@ export async function swapMenuRecipe(params: {
       date: params.date,
       mealType: params.mealType,
       healthScore: 0,
+      vesselId,
     },
     { onConflict: "id" },
   );
@@ -731,12 +753,17 @@ export async function swapMenuRecipe(params: {
 }
 
 export async function loadExistingPlan(days: number = 30): Promise<GeneratedDay[] | null> {
+  const user = await getCurrentUser();
+  if (!user) return null;
+  const vesselId = user.vesselIds?.[0];
+  if (!vesselId) return null;
   const supabase = await createSupabaseServerClient();
   const { data: plans, error } = await supabase
     .from("MenuPlan")
     .select(
       "id,date,mealType,healthScore,recipeLinks:MenuPlanRecipe(recipe:Recipe(id,name,category,calories,protein,salt,costPerServing,ingredients:RecipeIngredient(amount,ingredient:Ingredient(costPerUnit))))",
     )
+    .eq("vesselId", vesselId)
     .order("date", { ascending: true })
     .order("mealType", { ascending: true });
 
@@ -833,10 +860,15 @@ export async function loadExistingPlan(days: number = 30): Promise<GeneratedDay[
 
 // 最新の献立日付範囲を取得するユーティリティ。
 export async function getLatestPlanRange() {
+  const user = await getCurrentUser();
+  if (!user) return null;
+  const vesselId = user.vesselIds?.[0];
+  if (!vesselId) return null;
   const supabase = await createSupabaseServerClient();
   const { data: dates, error } = await supabase
     .from("MenuPlan")
     .select("date")
+    .eq("vesselId", vesselId)
     .order("date", { ascending: true });
 
   if (error || !dates) return null;
@@ -857,6 +889,14 @@ export async function trimMenuPlanDays(effectiveDays: number): Promise<Generated
   if (!effectiveDays || effectiveDays < 1) {
     throw new Error("日数は1以上を指定してください。");
   }
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error("認証が必要です。");
+  }
+  const vesselId = user.vesselIds?.[0];
+  if (!vesselId) {
+    throw new Error("担当船舶が設定されていません。");
+  }
   const range = await getLatestPlanRange();
   if (!range) {
     throw new Error("短縮できる献立が存在しません。まず献立を生成してください。");
@@ -865,7 +905,11 @@ export async function trimMenuPlanDays(effectiveDays: number): Promise<Generated
   const targetDates = range.dates.slice(0, Math.min(effectiveDays, range.days));
   const supabase = await createSupabaseServerClient();
   const dateList = targetDates.map((d) => `"${d}"`).join(",");
-  await supabase.from("MenuPlan").delete().not("date", "in", `(${dateList})`);
+  await supabase
+    .from("MenuPlan")
+    .delete()
+    .eq("vesselId", vesselId)
+    .not("date", "in", `(${dateList})`);
 
   // 削除後の最新状態を再読込して返す
   return loadExistingPlan(targetDates.length);

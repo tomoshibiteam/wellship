@@ -166,6 +166,22 @@ export class DifyMenuGenerator implements MenuGenerator {
 
             const data = await response.json();
 
+            // 📥 Dify生レスポンスをログ出力
+            if (process.env.NODE_ENV !== 'production') {
+                console.log('📥 Dify APIレスポンス受信:', {
+                    workflow_run_id: data.workflow_run_id ?? 'N/A',
+                    task_id: data.task_id ?? 'N/A',
+                    status: data.data?.status ?? 'N/A',
+                    elapsed_time: data.data?.elapsed_time ?? 'N/A',
+                    total_tokens: data.data?.total_tokens ?? 'N/A',
+                    outputs_keys: data.data?.outputs ? Object.keys(data.data.outputs) : [],
+                });
+                // 詳細出力（DIFY_LOG_PAYLOAD=1 のときのみ）
+                if (process.env.DIFY_LOG_PAYLOAD === '1') {
+                    console.log('📥 Dify outputs (raw):', JSON.stringify(data.data?.outputs ?? data.outputs, null, 2));
+                }
+            }
+
             // Extract output from Dify response
             // Dify response structure: { data: { outputs: { ... } } }
             const outputs = data.data?.outputs ?? data.outputs;
@@ -232,13 +248,26 @@ export class DifyMenuGenerator implements MenuGenerator {
                             outputs && typeof outputs === 'object' && !Array.isArray(outputs)
                                 ? Object.keys(outputs)
                                 : [];
-                        console.error('Dify outputs keys:', keys);
-                        console.error('Dify outputs raw:', outputs);
+                        console.error('❌ Dify outputs keys:', keys);
+                        console.error('❌ Dify outputs raw:', outputs);
                     } catch {
                         // noop
                     }
                 }
                 throw new Error('No menu output from Dify workflow');
+            }
+
+            // ✅ Difyレスポンス確認ログ
+            if (process.env.NODE_ENV !== 'production') {
+                const planDays = output.plan?.length ?? output.days?.length ?? 0;
+                const usedRecipes = output.used_recipe_ids?.length ?? 0;
+                const warnings = output.summary?.warnings ?? [];
+                console.log('✅ Difyからレスポンス受信:', {
+                    生成日数: planDays,
+                    使用レシピ数: usedRecipes,
+                    警告: warnings.length > 0 ? warnings : 'なし',
+                    ワークフローID: data.workflow_run_id ?? 'N/A',
+                });
             }
 
             // Validate and parse output

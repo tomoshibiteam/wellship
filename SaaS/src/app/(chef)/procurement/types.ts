@@ -16,6 +16,18 @@ export type ProcurementItem = {
   inStock: boolean;
   unitCost: number;
   subtotal: number;
+  // 商社プラットフォーム追加フィールド
+  isBonus: boolean; // ロス食材（Boost食材）フラグ
+  price: number;    // 標準単価（円） (後方互換用、matchedProductがあればそちら優先)
+
+  // マッチングされたサプライヤー商品
+  matchedProduct?: {
+    id: string;
+    name: string;
+    supplierName: string;
+    price: number;
+    unit: string;
+  } | null;
 };
 
 export type ProcurementResult = {

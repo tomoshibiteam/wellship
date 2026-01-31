@@ -19,6 +19,7 @@ export const ROUTES = {
         feedback: '/app/chef/feedback',
         feedbackSummary: '/app/chef/feedback/summary',
         procurement: '/app/chef/procurement',
+        orders: '/app/chef/orders',  // 発注履歴
     },
 
     // Manager（本部）側
@@ -27,10 +28,18 @@ export const ROUTES = {
         dashboard: '/app/manager/dashboard',
         vessels: '/app/manager/vessels',
         vesselDetail: (vesselId: string) => `/app/manager/vessels/${vesselId}`,
+        suppliers: '/app/manager/suppliers',
         insights: '/app/manager/insights',
         executiveSummary: '/app/manager/executive/summary',
         settings: '/app/manager/settings',
         settingsUsers: '/app/manager/settings/users',
+        orders: '/app/manager/orders',
+    },
+
+    // Supplier（サプライヤー）側
+    supplier: {
+        root: '/app/supplier',
+        products: '/app/supplier/products',
     },
 
     // キオスク
@@ -45,12 +54,14 @@ export const ROUTES = {
 /**
  * ロールに応じたデフォルトページを取得
  */
-export function getDefaultRouteForRole(role: 'CHEF' | 'MANAGER'): string {
+export function getDefaultRouteForRole(role: 'CHEF' | 'MANAGER' | 'SUPPLIER'): string {
     switch (role) {
         case 'CHEF':
             return ROUTES.chef.recipes;
         case 'MANAGER':
             return ROUTES.manager.dashboard;
+        case 'SUPPLIER':
+            return ROUTES.supplier.products;
         default:
             return ROUTES.auth.login;
     }

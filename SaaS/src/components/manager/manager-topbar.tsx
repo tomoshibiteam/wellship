@@ -20,8 +20,8 @@ export function ManagerTopBar({ user }: ManagerTopBarProps) {
 
   const canRoleSwitch =
     !!user &&
-    process.env.NODE_ENV !== 'production' &&
-    user.email.toLowerCase() === 'wataru.1998.0606@gmail.com';
+    process.env.NODE_ENV !== 'production';
+  // user.email.toLowerCase() === 'wataru.1998.0606@gmail.com';
 
   // MVP用: ロールに応じた表示名
   const displayName = user?.role === 'MANAGER' ? '佐藤' : user?.name || user?.email || '';
@@ -43,7 +43,9 @@ export function ManagerTopBar({ user }: ManagerTopBarProps) {
       const target =
         role === 'CHEF'
           ? ROUTES.chef.recipes
-          : ROUTES.manager.dashboard;
+          : role === 'MANAGER'
+            ? ROUTES.manager.dashboard
+            : ROUTES.supplier.products;
 
       // Use window.location for hard reload to ensure clean state transition
       window.location.href = target;
@@ -86,6 +88,17 @@ export function ManagerTopBar({ user }: ManagerTopBarProps) {
                 }`}
             >
               本部
+            </button>
+            <button
+              type="button"
+              onClick={() => switchRole('SUPPLIER')}
+              disabled={isSwitchingRole || user.role === 'SUPPLIER'}
+              className={`rounded-md px-3 py-1 text-xs font-semibold transition ${user.role === 'SUPPLIER'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+                }`}
+            >
+              業者
             </button>
           </div>
         )}

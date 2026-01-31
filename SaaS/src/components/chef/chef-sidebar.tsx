@@ -7,6 +7,7 @@ import {
     Calendar,
     Compass,
     MessageSquare,
+    ShoppingCart,
     Utensils,
 } from 'lucide-react';
 import { ROUTES } from '@/lib/routes';
@@ -30,18 +31,14 @@ const navItems = [
         description: '当日の献立確定・編集',
         icon: Calendar,
     },
+
     {
         href: ROUTES.chef.feedback,
         label: '喫食フィードバック',
         description: 'NFCカードで収集',
         icon: Utensils,
     },
-    {
-        href: ROUTES.chef.feedbackSummary,
-        label: 'みんなの声',
-        description: '嬉しいフィードバック',
-        icon: MessageSquare,
-    },
+
 ];
 
 export function ChefNavigation() {

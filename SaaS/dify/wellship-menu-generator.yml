@@ -1,0 +1,2490 @@
+app:
+  description: WELLSHIP船舶献立生成ワークフロー - Gemini経由で7日間の献立を自動生成
+  icon: 🤖
+  icon_background: '#FFEAD5'
+  mode: workflow
+  name: wellship-menu-generator
+  use_icon_as_answer_icon: false
+dependencies:
+- current_identifier: null
+  type: marketplace
+  value:
+    marketplace_plugin_unique_identifier: langgenius/gemini:0.7.4@5faf411e694e0da130a337347a625a3812b1b7502a0183382d66d92c841bf05a
+    version: null
+kind: app
+version: 0.5.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      allowed_file_extensions:
+      - .JPG
+      - .JPEG
+      - .PNG
+      - .GIF
+      - .WEBP
+      - .SVG
+      allowed_file_types:
+      - image
+      allowed_file_upload_methods:
+      - local_file
+      - remote_url
+      enabled: false
+      fileUploadConfig:
+        attachment_image_file_size_limit: 2
+        audio_file_size_limit: 50
+        batch_count_limit: 5
+        file_size_limit: 15
+        file_upload_limit: 50
+        image_file_batch_limit: 10
+        image_file_size_limit: 10
+        single_chunk_attachment_limit: 10
+        video_file_size_limit: 100
+        workflow_file_upload_limit: 10
+      image:
+        enabled: false
+        number_limits: 3
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 3
+    opening_statement: ''
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: code
+      id: 1767927502991-source-1767928040815-target
+      selected: false
+      source: '1767927502991'
+      sourceHandle: source
+      target: '1767928040815'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: start
+        targetType: code
+      id: 1767921859747-source-1768109264965-target
+      selected: false
+      source: '1767921859747'
+      sourceHandle: source
+      target: '1768109264965'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: code
+      id: 1768109264965-source-1768110009228-target
+      selected: false
+      source: '1768109264965'
+      sourceHandle: source
+      target: '1768110009228'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: code
+      id: 1768110009228-source-1768110503458-target
+      selected: false
+      source: '1768110009228'
+      sourceHandle: source
+      target: '1768110503458'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: if-else
+      id: 1768110503458-source-1768112963690-target
+      selected: false
+      source: '1768110503458'
+      sourceHandle: source
+      target: '1768112963690'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: if-else
+        targetType: code
+      id: 1768112963690-true-1767924816129-target
+      selected: false
+      source: '1768112963690'
+      sourceHandle: 'true'
+      target: '1767924816129'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: end
+      id: 1768112963690-false-1768113101172-target
+      selected: false
+      source: '1768112963690'
+      sourceHandle: 'false'
+      target: '1768113101172'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: code
+        targetType: llm
+      id: 1767924816129-source-1767926551632-target
+      selected: false
+      source: '1767924816129'
+      sourceHandle: source
+      target: '1767926551632'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: llm
+        targetType: code
+      id: 1767926551632-source-1767927502991-target
+      selected: false
+      source: '1767926551632'
+      sourceHandle: source
+      target: '1767927502991'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: if-else
+        targetType: loop
+      id: 1768117209901-false-1768116634669-target
+      selected: false
+      source: '1768117209901'
+      sourceHandle: 'false'
+      target: '1768116634669'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: end
+      id: 1768117237001-source-1768117508202-target
+      selected: false
+      source: '1768117237001'
+      sourceHandle: source
+      target: '1768117508202'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: code
+        targetType: if-else
+      id: 1767928040815-source-1768117209901-target
+      selected: false
+      source: '1767928040815'
+      sourceHandle: source
+      target: '1768117209901'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: if-else
+        targetType: code
+      id: 1768117209901-true-1768117237001-target
+      selected: false
+      source: '1768117209901'
+      sourceHandle: 'true'
+      target: '1768117237001'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: true
+        loop_id: '1768116634669'
+        sourceType: code
+        targetType: llm
+      id: 1768118999905-source-1768119249124-target
+      selected: false
+      source: '1768118999905'
+      sourceHandle: source
+      target: '1768119249124'
+      targetHandle: target
+      type: custom
+      zIndex: 1002
+    - data:
+        isInIteration: false
+        isInLoop: true
+        loop_id: '1768116634669'
+        sourceType: llm
+        targetType: code
+      id: 1768119249124-source-1768119352136-target
+      selected: false
+      source: '1768119249124'
+      sourceHandle: source
+      target: '1768119352136'
+      targetHandle: target
+      type: custom
+      zIndex: 1002
+    - data:
+        isInIteration: false
+        isInLoop: true
+        loop_id: '1768116634669'
+        sourceType: assigner
+        targetType: code
+      id: 1768122258698-source-1768118999905-target
+      selected: false
+      source: '1768122258698'
+      sourceHandle: source
+      target: '1768118999905'
+      targetHandle: target
+      type: custom
+      zIndex: 1002
+    - data:
+        isInIteration: false
+        isInLoop: true
+        loop_id: '1768116634669'
+        sourceType: code
+        targetType: assigner
+      id: 1768119352136-source-1768122433358-target
+      selected: false
+      source: '1768119352136'
+      sourceHandle: source
+      target: '1768122433358'
+      targetHandle: target
+      type: custom
+      zIndex: 1002
+    - data:
+        isInIteration: false
+        isInLoop: true
+        loop_id: '1768116634669'
+        sourceType: assigner
+        targetType: code
+      id: 1768122433358-source-1768119683472-target
+      selected: false
+      source: '1768122433358'
+      sourceHandle: source
+      target: '1768119683472'
+      targetHandle: target
+      type: custom
+      zIndex: 1002
+    - data:
+        isInIteration: false
+        isInLoop: true
+        loop_id: '1768116634669'
+        sourceType: code
+        targetType: assigner
+      id: 1768119683472-source-1768122498335-target
+      selected: false
+      source: '1768119683472'
+      sourceHandle: source
+      target: '1768122498335'
+      targetHandle: target
+      type: custom
+      zIndex: 1002
+    - data:
+        isInIteration: false
+        isInLoop: true
+        loop_id: '1768116634669'
+        sourceType: loop-start
+        targetType: assigner
+      id: 1768116634669start-source-1768122258698-target
+      selected: false
+      source: 1768116634669start
+      sourceHandle: source
+      target: '1768122258698'
+      targetHandle: target
+      type: custom
+      zIndex: 1002
+    - data:
+        isInLoop: false
+        sourceType: loop
+        targetType: code
+      id: 1768116634669-source-17681267016680-target
+      selected: false
+      source: '1768116634669'
+      sourceHandle: source
+      target: '17681267016680'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: end
+      id: 17681267016680-source-1768127280828-target
+      selected: false
+      source: '17681267016680'
+      sourceHandle: source
+      target: '1768127280828'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    nodes:
+    - data:
+        selected: false
+        title: 🚀 START_ユーザー入力
+        type: start
+        variables:
+        - default: '20'
+          hint: ''
+          label: 乗組員数
+          max_length: 48
+          options: []
+          placeholder: ''
+          required: true
+          type: number
+          variable: crew_count
+        - default: '3'
+          hint: ''
+          label: 生成日数
+          max_length: 48
+          options: []
+          placeholder: ''
+          required: true
+          type: number
+          variable: days
+        - default: '1200'
+          hint: ''
+          label: 予算 (円/人/日)
+          max_length: 48
+          options: []
+          placeholder: ''
+          required: true
+          type: number
+          variable: budget_per_person_per_day
+        - default: '90'
+          hint: ''
+          label: 最低予算消化率 (%)
+          max_length: 48
+          options: []
+          placeholder: ''
+          required: false
+          type: number
+          variable: min_budget_usage_percent
+        - default: '2025-01-09'
+          hint: ''
+          label: 開始日 (YYYY-MM-DD)
+          max_length: 10
+          options: []
+          placeholder: ''
+          required: true
+          type: text-input
+          variable: start_date
+        - default: winter
+          hint: ''
+          label: 季節
+          max_length: 48
+          options:
+          - spring
+          - summer
+          - autumn
+          - winter
+          placeholder: ''
+          required: true
+          type: select
+          variable: season
+        - default: '60'
+          hint: ''
+          label: 調理時間上限(分)
+          max_length: 48
+          options: []
+          placeholder: ''
+          required: true
+          type: number
+          variable: cooking_time_limit
+        - default: '[]'
+          hint: ''
+          label: 禁止食材（json配列文字列）
+          max_length: 10000
+          options: []
+          placeholder: ''
+          required: false
+          type: paragraph
+          variable: banned_ingredients
+        - default: '{}'
+          hint: ''
+          label: 曜日ルール(JSONオブジェクト文字列)
+          max_length: 20000
+          options: []
+          placeholder: ''
+          required: false
+          type: paragraph
+          variable: weekday_rules
+        - default: ''
+          hint: ''
+          label: 使用可能レシピID（JSON配列文字列）
+          max_length: 200000
+          options: []
+          placeholder: ''
+          required: false
+          type: paragraph
+          variable: allowed_recipe_ids
+        - default: ''
+          hint: ''
+          label: レシピ一覧 (JSON文字列)
+          max_length: 2000000
+          options: []
+          placeholder: ''
+          required: true
+          type: paragraph
+          variable: recipes
+        - default: '2200'
+          hint: ''
+          label: 目標カロリー（kcal/日）
+          max_length: 48
+          options: []
+          placeholder: ''
+          required: false
+          type: number
+          variable: daily_calorie_target
+        - default: '70'
+          hint: ''
+          label: 目標タンパク質（g/人/日）
+          max_length: 48
+          options: []
+          placeholder: ''
+          required: false
+          type: number
+          variable: daily_protein_target
+        - default: '8'
+          hint: ''
+          label: 塩分上限(g/人/日)
+          max_length: 48
+          options: []
+          placeholder: ''
+          required: false
+          type: number
+          variable: daily_salt_max
+      height: 447
+      id: '1767921859747'
+      position:
+        x: -1233.3764095910938
+        y: 264.2139719675385
+      positionAbsolute:
+        x: -1233.3764095910938
+        y: 264.2139719675385
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import json\nfrom datetime import datetime, timedelta\n\ndef _dates(start_date:\
+          \ str, days: int):\n    d0 = datetime.strptime(start_date, \"%Y-%m-%d\"\
+          )\n    return [(d0 + timedelta(days=i)).strftime(\"%Y-%m-%d\") for i in\
+          \ range(days)]\n\ndef _pick_fields(r: dict):\n    # LLMに渡す情報は最小限（トークン節約・安定化）\n\
+          \    keys = [\"id\", \"name\", \"category\", \"costPerServing\", \"calories\"\
+          , \"protein\", \"salt\", \"score\"]\n    return {k: r.get(k) for k in keys\
+          \ if k in r}\n\ndef _collect_allowed_ids(candidates_by_cat: dict):\n   \
+          \ ids = []\n    for _, lst in (candidates_by_cat or {}).items():\n     \
+          \   if not isinstance(lst, list):\n            continue\n        for r in\
+          \ lst:\n            if isinstance(r, dict) and r.get(\"id\"):\n        \
+          \        ids.append(r[\"id\"])\n    # unique-preserve-order\n    seen =\
+          \ set()\n    uniq = []\n    for x in ids:\n        if x not in seen:\n \
+          \           seen.add(x)\n            uniq.append(x)\n    return uniq\n\n\
+          def main(norm3):\n    \"\"\"\n    Output variables expected (example):\n\
+          \      - draft_prompt: string\n      - error: string\n    \"\"\"\n    try:\n\
+          \        if not isinstance(norm3, dict):\n            return {\"draft_prompt\"\
+          : \"\", \"error\": \"norm3 must be object\"}\n\n        # ---- required\
+          \ ----\n        days = int(norm3[\"days\"])\n        crew = int(norm3[\"\
+          crew_count\"])\n        budget = float(norm3[\"budget_per_person_per_day\"\
+          ])\n        min_usage = float(norm3.get(\"min_budget_usage_percent\", 0))\n\
+          \        start_date = norm3[\"start_date\"]\n\n        # ---- optional ----\n\
+          \        daily_cal = norm3.get(\"daily_calorie_target\")\n        daily_protein\
+          \ = norm3.get(\"daily_protein_target\")\n        daily_salt_max = norm3.get(\"\
+          daily_salt_max\")\n\n        banned = norm3.get(\"banned_ingredients\",\
+          \ [])\n        weekday_rules = norm3.get(\"weekday_rules\", {})\n\n    \
+          \    candidates_by_cat = norm3.get(\"candidates_by_cat\", {})\n        if\
+          \ not isinstance(candidates_by_cat, dict):\n            candidates_by_cat\
+          \ = {}\n\n        dates = _dates(start_date, days)\n\n        # candidatesを縮約して埋め込む（スコア内訳などは渡さない）\n\
+          \        candidates_min = {}\n        for cat, lst in candidates_by_cat.items():\n\
+          \            if not isinstance(lst, list):\n                continue\n \
+          \           candidates_min[cat] = [_pick_fields(r) for r in lst if isinstance(r,\
+          \ dict)]\n\n        allowed_recipe_ids = _collect_allowed_ids(candidates_min)\n\
+          \n        # ---- prompt text (NO markdown emphasis to avoid format drift)\
+          \ ----\n        parts = []\n\n        parts.append(\n            \"あなたは船上の献立作成アシスタントです。\\\
+          n\"\n            \"必ず以下の「候補レシピ」に含まれる id だけを使って献立を作成してください。\\n\"\n      \
+          \      \"出力は各 meal の recipe_ids 配列に、候補の id を入れて構成します。\\n\"\n           \
+          \ \"候補にない id を出力したり、新しいレシピ名や id を創作してはいけません。\\n\"\n            \"JSON以外（説明文、マークダウン、コードブロック等）は一切出力しないでください。\"\
+          \n        )\n\n        parts.append(\"## 期間\\n\" + json.dumps({\"dates\"\
+          : dates}, ensure_ascii=False))\n\n        parts.append(\"## 入力条件（制約）\\n\"\
+          \ + json.dumps({\n            \"crew_count\": crew,\n            \"days\"\
+          : days,\n            \"budget_per_person_per_day\": budget,\n          \
+          \  \"min_budget_usage_percent\": min_usage,\n            \"season\": norm3.get(\"\
+          season\"),\n            \"cooking_time_limit\": norm3.get(\"cooking_time_limit\"\
+          ),\n            \"banned_ingredients\": banned if isinstance(banned, list)\
+          \ else [],\n            \"weekday_rules\": weekday_rules if isinstance(weekday_rules,\
+          \ dict) else {},\n            \"daily_targets\": {\n                \"calories\"\
+          : daily_cal,\n                \"protein\": daily_protein,\n            \
+          \    \"salt_max\": daily_salt_max\n            }\n        }, ensure_ascii=False))\n\
+          \n        parts.append(\"## 使用可能なid一覧（この中のみ使用可）\\n\" + json.dumps(\n   \
+          \         {\"allowed_recipe_ids\": allowed_recipe_ids},\n            ensure_ascii=False\n\
+          \        ))\n\n        parts.append(\"## 候補レシピ（この中からのみ選ぶ）\\n\" + json.dumps(\n\
+          \            candidates_min, ensure_ascii=False\n        ))\n\n        parts.append(\n\
+          \            \"## 目的（最適化）\\n\"\n            \"- 最優先：候補idのみ使用 / 禁止食材を守る /\
+          \ JSON厳守\\n\"\n            \"- 予算：1日あたりの合計 cost_per_person が budget_per_person_per_day\
+          \ 以下、かつ可能なら min_budget_usage_percent を満たす\\n\"\n            \"- 栄養：タンパク質を優先しつつ、塩分は可能な範囲で上限以内に寄せる\\\
+          n\"\n            \"- 重複回避：同一idの連続・過剰な繰り返しを避ける（候補が少ない場合は例外可。その場合 warnings\
+          \ に理由を書く）\\n\"\n            \"- バランス：可能なら主菜/副菜/汁物のバランスを保つ\"\n        )\n\
+          \n        parts.append(\n            \"### 実現不能時のルール\\n\"\n            \"\
+          - 候補が少なく目標（栄養/予算下限/重複回避など）を同時に満たせない場合があります。\\n\"\n            \"- その場合でも「候補idのみ使用」を絶対に守り、次に「予算上限」を守ってください。\\\
+          n\"\n            \"- 満たせなかった目標は summary.warnings に文字列で記録してください（例: \\\"calories_shortfall\\\
+          \", \\\"protein_shortfall\\\", \\\"min_budget_not_met\\\", \\\"limited_candidates_repeat\\\
+          \"）。\"\n        )\n\n        parts.append(\n            \"## meal構成ガイド（推奨）\\\
+          n\"\n            \"- breakfast：副菜/汁物中心（例：side + soup）\\n\"\n           \
+          \ \"- lunch：主菜 + 副菜 + 汁物（例：main + side + soup）\\n\"\n            \"- dinner：主菜\
+          \ + 副菜 + 汁物（必要なら dessert を追加）\\n\"\n            \"※ 各 meal の recipe_ids\
+          \ は 2〜4個程度を目安にし、必ず allowed_recipe_ids の中から選ぶ。\"\n        )\n\n        parts.append(\n\
+          \            \"## 出力JSONスキーマ（厳守）\\n\"\n            \"{\\n\"\n          \
+          \  '  \"plan\": [\\n'\n            \"    {\\n\"\n            '      \"date\"\
+          : \"YYYY-MM-DD\",\\n'\n            '      \"meals\": {\\n'\n           \
+          \ '        \"breakfast\": {\"recipe_ids\": [\"...\"]},\\n'\n           \
+          \ '        \"lunch\": {\"recipe_ids\": [\"...\"]},\\n'\n            '  \
+          \      \"dinner\": {\"recipe_ids\": [\"...\"]}\\n'\n            \"     \
+          \ },\\n\"\n            '      \"totals\": {\"cost_per_person\": 0, \"calories\"\
+          : 0, \"protein\": 0, \"salt\": 0}\\n'\n            \"    }\\n\"\n      \
+          \      \"  ],\\n\"\n            '  \"used_recipe_ids\": [\"...\"],\\n'\n\
+          \            '  \"summary\": {\\n'\n            '    \"total_cost_per_person_per_day_avg\"\
+          : 0,\\n'\n            '    \"warnings\": []\\n'\n            \"  }\\n\"\n\
+          \            \"}\\n\"\n            \"※ totals は候補レシピの値から概算で良い。\\n\"\n  \
+          \          \"※ used_recipe_ids は plan 内で使った recipe_ids のユニーク集合。\\n\"\n \
+          \           \"最終出力はこのスキーマに沿ったJSONオブジェクトのみ。\"\n        )\n\n        draft_prompt\
+          \ = \"\\n\\n\".join(parts)\n        return {\"draft_prompt\": draft_prompt,\
+          \ \"error\": \"\"}\n\n    except Exception as e:\n        return {\"draft_prompt\"\
+          : \"\", \"error\": f\"prompt_build_failed: {str(e)}\"}\n"
+        code_language: python3
+        outputs:
+          draft_prompt:
+            children: null
+            type: string
+          error:
+            children: null
+            type: string
+        selected: false
+        title: 📝 CODE_プロンプト編集
+        type: code
+        variables:
+        - value_selector:
+          - '1768110503458'
+          - norm3
+          value_type: object
+          variable: norm3
+      height: 52
+      id: '1767924816129'
+      position:
+        x: 417.01567705765524
+        y: 285.2139719675385
+      positionAbsolute:
+        x: 417.01567705765524
+        y: 285.2139719675385
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        model:
+          completion_params:
+            max_output_tokens: 4096
+            temperature: 0.3
+            thinking_level: Low
+          mode: chat
+          name: gemini-3-flash-preview
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: 582e3135-727c-48c1-906f-7f851f621711
+          role: system
+          text: You must follow the user's instructions exactly. Output only the JSON
+            object described by the schema. Do not output any extra text.
+        - id: 13f449dc-b1bb-4827-bfab-5132812735ba
+          role: user
+          text: '{{#1767924816129.draft_prompt#}}'
+        reasoning_format: separated
+        selected: true
+        structured_output:
+          schema:
+            properties:
+              days:
+                items:
+                  properties:
+                    breakfast:
+                      description: 朝食のレシピID配列
+                      items:
+                        type: string
+                      type: array
+                    date:
+                      description: YYYY-MM-DD形式の日付
+                      type: string
+                    dayLabel:
+                      description: 曜日（例：月曜日）
+                      type: string
+                    dinner:
+                      description: 夕食のレシピID配列
+                      items:
+                        type: string
+                      type: array
+                    lunch:
+                      description: 昼食のレシピID配列
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - date
+                  - dayLabel
+                  - breakfast
+                  - lunch
+                  - dinner
+                  type: object
+                type: array
+            required:
+            - days
+            type: object
+        structured_output_enabled: false
+        title: 🤖 LLM_献立生成
+        type: llm
+        vision:
+          enabled: false
+      height: 88
+      id: '1767926551632'
+      position:
+        x: 792.9759132276823
+        y: 285.2139719675385
+      positionAbsolute:
+        x: 792.9759132276823
+        y: 285.2139719675385
+      selected: true
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import json\n\ndef _strip_code_fence(s: str) -> str:\n    s = (s or\
+          \ \"\").strip()\n    if s.startswith(\"```\"):\n        lines = s.splitlines()\n\
+          \        if lines:\n            lines = lines[1:]  # drop first fence line\n\
+          \        if lines and lines[-1].strip().startswith(\"```\"):\n         \
+          \   lines = lines[:-1]\n        s = \"\\n\".join(lines).strip()\n    return\
+          \ s\n\ndef _extract_first_json_block(s: str):\n    if not s:\n        return\
+          \ None\n    start = None\n    for i, ch in enumerate(s):\n        if ch\
+          \ in \"{[\":\n            start = i\n            opener = ch\n          \
+          \  break\n    if start is None:\n        return None\n    closer = \"}\"\
+          \ if opener == \"{\" else \"]\"\n    stack = [closer]\n    in_str = False\n\
+          \    esc = False\n    for i in range(start + 1, len(s)):\n        ch = s[i]\n\
+          \        if in_str:\n            if esc:\n                esc = False\n \
+          \               continue\n            if ch == \"\\\\\":\n              \
+          \  esc = True\n                continue\n            if ch == '\"':\n   \
+          \             in_str = False\n            continue\n        if ch == '\"':\n\
+          \            in_str = True\n            continue\n        if ch == \"{\":\n\
+          \            stack.append(\"}\")\n        elif ch == \"[\":\n           \
+          \ stack.append(\"]\")\n        elif ch in \"}]\":\n            if not stack:\n\
+          \                return None\n            expected = stack.pop()\n      \
+          \      if ch != expected:\n                return None\n            if not\
+          \ stack:\n                return s[start:i+1]\n    return None\n\ndef _normalize_meal_format(meal_obj):\n\
+          \    if not isinstance(meal_obj, dict):\n        return meal_obj\n    if\
+          \ \"recipe_ids\" in meal_obj:\n        return meal_obj\n    recipe_ids =\
+          \ []\n    for key in [\"main_dish_id\", \"main_id\", \"main\", \"side_dish_id\"\
+          , \"side_id\", \"side\", \"soup_id\", \"soup\", \"dessert_id\", \"dessert\"\
+          ]:\n        val = meal_obj.get(key)\n        if val:\n            if isinstance(val,\
+          \ list):\n                recipe_ids.extend(val)\n            else:\n   \
+          \             recipe_ids.append(val)\n    if recipe_ids:\n        return\
+          \ {\"recipe_ids\": recipe_ids}\n    return meal_obj\n\ndef _normalize_plan(obj):\n\
+          \    if not isinstance(obj, dict):\n        return obj\n    plan = obj.get(\"\
+          plan\")\n    if not isinstance(plan, list):\n        return obj\n    normalized_plan\
+          \ = []\n    for day in plan:\n        if not isinstance(day, dict):\n  \
+          \          normalized_plan.append(day)\n            continue\n        meals\
+          \ = day.get(\"meals\")\n        if not isinstance(meals, dict):\n       \
+          \     normalized_plan.append(day)\n            continue\n        normalized_meals\
+          \ = {}\n        for meal_key in [\"breakfast\", \"lunch\", \"dinner\"]:\n\
+          \            meal_obj = meals.get(meal_key)\n            if meal_obj:\n \
+          \               normalized_meals[meal_key] = _normalize_meal_format(meal_obj)\n\
+          \        normalized_day = dict(day)\n        normalized_day[\"meals\"] =\
+          \ normalized_meals\n        normalized_plan.append(normalized_day)\n    result\
+          \ = dict(obj)\n    result[\"plan\"] = normalized_plan\n    return result\n\
+          \ndef main(text):\n    try:\n        raw = _strip_code_fence(text)\n    \
+          \    try:\n            obj = json.loads(raw)\n            obj = _normalize_plan(obj)\n\
+          \            return {\"draft_json\": obj, \"ok\": True, \"error\": \"\"}\n\
+          \        except Exception:\n            pass\n        block = _extract_first_json_block(raw)\n\
+          \        if not block:\n            return {\"draft_json\": None, \"ok\"\
+          : False, \"error\": \"json_not_found_in_text\"}\n        try:\n         \
+          \   obj = json.loads(block)\n            obj = _normalize_plan(obj)\n   \
+          \         return {\"draft_json\": obj, \"ok\": True, \"error\": \"\"}\n \
+          \       except Exception as e:\n            return {\"draft_json\": None,\
+          \ \"ok\": False, \"error\": f\"json_parse_failed: {str(e)}\"}\n    except\
+          \ Exception as e:\n        return {\"draft_json\": None, \"ok\": False,\
+          \ \"error\": f\"extract_failed: {str(e)}\"}\n"
+        code_language: python3
+        outputs:
+          draft_json:
+            children: null
+            type: object
+          error:
+            children: null
+            type: string
+          ok:
+            children: null
+            type: boolean
+        selected: false
+        title: 📝 CODE_JSON抽出・正規化
+        type: code
+        variables:
+        - value_selector:
+          - '1767926551632'
+          - text
+          value_type: string
+          variable: text
+      height: 52
+      id: '1767927502991'
+      position:
+        x: 1207.7081355945259
+        y: 285.2139719675385
+      positionAbsolute:
+        x: 1207.7081355945259
+        y: 285.2139719675385
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "from datetime import datetime, timedelta\n\ndef _dates(start_date:\
+          \ str, days: int):\n    d0 = datetime.strptime(start_date, \"%Y-%m-%d\"\
+          )\n    return [(d0 + timedelta(days=i)).strftime(\"%Y-%m-%d\") for i in\
+          \ range(days)]\n\ndef _safe_float(x, default=0.0):\n    try:\n        if\
+          \ x is None:\n            return default\n        return float(x)\n    except\
+          \ Exception:\n        return default\n\ndef _safe_int(x, default=0):\n \
+          \   try:\n        if x is None:\n            return default\n        return\
+          \ int(x)\n    except Exception:\n        return default\n\ndef _as_list(x):\n\
+          \    return x if isinstance(x, list) else []\n\ndef _as_dict(x):\n    return\
+          \ x if isinstance(x, dict) else {}\n\ndef _build_allowed_ids(norm3):\n \
+          \   cbc = _as_dict(norm3.get(\"candidates_by_cat\"))\n    ids = set()\n\
+          \    for _, lst in cbc.items():\n        for r in _as_list(lst):\n     \
+          \       if isinstance(r, dict) and isinstance(r.get(\"id\"), str):\n   \
+          \             ids.add(r[\"id\"])\n    if not ids:\n        rmap = _as_dict(norm3.get(\"\
+          recipe_map\"))\n        ids = set(rmap.keys())\n    return ids\n\ndef _candidate_ids_by_cat(norm3):\n\
+          \    cbc = _as_dict(norm3.get(\"candidates_by_cat\"))\n    out = {\"main\"\
+          : [], \"side\": [], \"soup\": [], \"dessert\": []}\n    for cat in out.keys():\n\
+          \        lst = _as_list(cbc.get(cat))\n        ids = []\n        for r in\
+          \ lst:\n            if isinstance(r, dict) and isinstance(r.get(\"id\"),\
+          \ str):\n                ids.append(r[\"id\"])\n        out[cat] = ids\n\
+          \    return out\n\ndef _recipe_map(norm3):\n    return _as_dict(norm3.get(\"\
+          recipe_map\"))\n\ndef _contains_banned(name: str, banned_words):\n    if\
+          \ not name:\n        return False\n    s = str(name)\n    for w in banned_words:\n\
+          \        if not w:\n            continue\n        if str(w) in s:\n    \
+          \        return True\n    return False\n\ndef _finalize(out):\n    # 型の強制（Difyの型検証を必ず通す）\n\
+          \    if not isinstance(out.get(\"is_valid\"), bool):\n        out[\"is_valid\"\
+          ] = False\n\n    if not isinstance(out.get(\"violations\"), list):\n   \
+          \     out[\"violations\"] = []\n    out[\"violations\"] = [v if isinstance(v,\
+          \ dict) else {\"code\": \"invalid_violation\", \"message\": str(v)}\n  \
+          \                       for v in out[\"violations\"]]\n\n    if not isinstance(out.get(\"\
+          fix_hints\"), list):\n        out[\"fix_hints\"] = []\n    out[\"fix_hints\"\
+          ] = [h if isinstance(h, dict) else {\"reason\": \"invalid_fix_hint\", \"\
+          raw\": str(h)}\n                        for h in out[\"fix_hints\"]]\n\n\
+          \    if not isinstance(out.get(\"computed\"), dict):\n        out[\"computed\"\
+          ] = {}\n\n    if not isinstance(out.get(\"warnings\"), list):\n        out[\"\
+          warnings\"] = []\n    out[\"warnings\"] = sorted(set([w for w in out[\"\
+          warnings\"] if isinstance(w, str)]))\n\n    if not isinstance(out.get(\"\
+          error\"), str):\n        out[\"error\"] = str(out.get(\"error\") or \"\"\
+          )\n\n    # validation_obj は “自分自身を含めない” 形で作る（自己参照防止）\n    out[\"validation_obj\"\
+          ] = {\n        \"is_valid\": out[\"is_valid\"],\n        \"violations\"\
+          : out[\"violations\"],\n        \"fix_hints\": out[\"fix_hints\"],\n   \
+          \     \"computed\": out[\"computed\"],\n        \"warnings\": out[\"warnings\"\
+          ],\n        \"error\": out[\"error\"],\n    }\n    return out\n\ndef main(draft_json,\
+          \ norm3):\n    out = {\n        \"is_valid\": False,\n        \"violations\"\
+          : [],\n        \"fix_hints\": [],\n        \"computed\": {},\n        \"\
+          warnings\": [],\n        \"error\": \"\",\n        \"validation_obj\": {}\n\
+          \    }\n\n    try:\n        norm3 = _as_dict(norm3)\n        recipe_map\
+          \ = _recipe_map(norm3)\n        allowed_ids = _build_allowed_ids(norm3)\n\
+          \        cand_ids_by_cat = _candidate_ids_by_cat(norm3)\n\n        days\
+          \ = _safe_int(norm3.get(\"days\"))\n        start_date = norm3.get(\"start_date\"\
+          )\n        budget = _safe_float(norm3.get(\"budget_per_person_per_day\"\
+          ))\n        min_usage_pct = _safe_float(norm3.get(\"min_budget_usage_percent\"\
+          ))\n        daily_salt_max = norm3.get(\"daily_salt_max\")\n        daily_cal_target\
+          \ = norm3.get(\"daily_calorie_target\")\n        daily_protein_target =\
+          \ norm3.get(\"daily_protein_target\")\n\n        banned = norm3.get(\"banned_ingredients\"\
+          , [])\n        if not isinstance(banned, list):\n            banned = []\n\
+          \n        if not isinstance(draft_json, dict):\n            out[\"violations\"\
+          ].append({\"code\": \"schema_invalid\", \"message\": \"draft_json must be\
+          \ object\"})\n            out[\"error\"] = \"draft_json must be object\"\
+          \n            return _finalize(out)\n\n        plan = draft_json.get(\"\
+          plan\")\n        if not isinstance(plan, list):\n            out[\"violations\"\
+          ].append({\"code\": \"schema_invalid\", \"message\": \"plan must be array\"\
+          , \"dayIndex\": None})\n            plan = []\n\n        expected_dates\
+          \ = _dates(start_date, days) if (start_date and days > 0) else None\n\n\
+          \        totals_by_day = []\n        used_ids_all = []\n        repeat_count\
+          \ = {}\n\n        for i, day in enumerate(plan):\n            if not isinstance(day,\
+          \ dict):\n                out[\"violations\"].append({\"code\": \"schema_invalid\"\
+          , \"message\": \"plan[i] must be object\", \"dayIndex\": i})\n         \
+          \       continue\n\n            date = day.get(\"date\")\n            if\
+          \ expected_dates and i < len(expected_dates) and date != expected_dates[i]:\n\
+          \                out[\"violations\"].append({\"code\": \"date_mismatch\"\
+          , \"message\": f\"expected {expected_dates[i]} but got {date}\", \"dayIndex\"\
+          : i, \"date\": date})\n\n            meals = day.get(\"meals\")\n      \
+          \      if not isinstance(meals, dict):\n                out[\"violations\"\
+          ].append({\"code\": \"schema_invalid\", \"message\": \"meals must be object\"\
+          , \"dayIndex\": i, \"date\": date})\n                continue\n\n      \
+          \      for meal_key in [\"breakfast\", \"lunch\", \"dinner\"]:\n       \
+          \         if meal_key not in meals:\n                    out[\"violations\"\
+          ].append({\"code\": \"schema_invalid\", \"message\": f\"missing meals.{meal_key}\"\
+          , \"dayIndex\": i, \"date\": date})\n\n            day_cost = day_cal =\
+          \ day_protein = day_salt = 0.0\n            per_meal_items = []  # (meal,\
+          \ rid, cost, salt, category)\n\n            for meal_key, meal_obj in meals.items():\n\
+          \                if not isinstance(meal_obj, dict):\n                  \
+          \  out[\"violations\"].append({\"code\": \"schema_invalid\", \"message\"\
+          : f\"{meal_key} must be object\", \"dayIndex\": i, \"date\": date, \"meal\"\
+          : meal_key})\n                    continue\n\n                rids = meal_obj.get(\"\
+          recipe_ids\")\n                if not isinstance(rids, list):\n        \
+          \            out[\"violations\"].append({\"code\": \"schema_invalid\", \"\
+          message\": f\"{meal_key}.recipe_ids must be array\", \"dayIndex\": i, \"\
+          date\": date, \"meal\": meal_key})\n                    continue\n\n   \
+          \             if len(rids) < 1:\n                    out[\"violations\"\
+          ].append({\"code\": \"empty_meal\", \"message\": f\"{meal_key} has no recipe_ids\"\
+          , \"dayIndex\": i, \"date\": date, \"meal\": meal_key})\n              \
+          \  elif len(rids) > 5:\n                    out[\"warnings\"].append(\"\
+          meal_too_many_items\")\n\n                for rid in rids:\n           \
+          \         if not isinstance(rid, str) or not rid:\n                    \
+          \    out[\"violations\"].append({\"code\": \"invalid_recipe_id\", \"message\"\
+          : \"recipe_id must be non-empty string\", \"dayIndex\": i, \"date\": date,\
+          \ \"meal\": meal_key})\n                        continue\n\n           \
+          \         used_ids_all.append(rid)\n                    repeat_count[rid]\
+          \ = repeat_count.get(rid, 0) + 1\n\n                    if rid not in allowed_ids:\n\
+          \                        out[\"violations\"].append({\"code\": \"recipe_not_allowed\"\
+          , \"message\": f\"{rid} not in allowed ids\", \"dayIndex\": i, \"date\"\
+          : date, \"meal\": meal_key, \"recipeId\": rid})\n                      \
+          \  continue\n\n                    rec = recipe_map.get(rid, {})\n     \
+          \               name = rec.get(\"name\", \"\")\n                    if _contains_banned(name,\
+          \ banned):\n                        out[\"violations\"].append({\"code\"\
+          : \"banned_ingredient_hit\", \"message\": f\"banned word matched in recipe\
+          \ name: {name}\", \"dayIndex\": i, \"date\": date, \"meal\": meal_key, \"\
+          recipeId\": rid})\n\n                    cost = _safe_float(rec.get(\"costPerServing\"\
+          ))\n                    cal = _safe_float(rec.get(\"calories\"))\n     \
+          \               protein = _safe_float(rec.get(\"protein\"))\n          \
+          \          salt = _safe_float(rec.get(\"salt\"))\n                    cat\
+          \ = rec.get(\"category\")\n\n                    day_cost += cost\n    \
+          \                day_cal += cal\n                    day_protein += protein\n\
+          \                    day_salt += salt\n                    per_meal_items.append((meal_key,\
+          \ rid, cost, salt, cat))\n\n            if budget > 0 and day_cost > budget:\n\
+          \                out[\"violations\"].append({\"code\": \"budget_exceeded\"\
+          , \"message\": f\"day cost_per_person {day_cost:.2f} > budget {budget:.2f}\"\
+          , \"dayIndex\": i, \"date\": date})\n                if per_meal_items:\n\
+          \                    meal_key, rid, cost, salt, cat = sorted(per_meal_items,\
+          \ key=lambda x: x[2], reverse=True)[0]\n                    cand = cand_ids_by_cat.get(cat,\
+          \ []) if isinstance(cat, str) else []\n                    alts = []\n \
+          \                   for cid in cand:\n                        if cid ==\
+          \ rid:\n                            continue\n                        r\
+          \ = recipe_map.get(cid, {})\n                        alts.append((cid, _safe_float(r.get(\"\
+          costPerServing\")), _safe_float(r.get(\"salt\"))))\n                   \
+          \ alts.sort(key=lambda x: x[1])\n                    out[\"fix_hints\"].append({\"\
+          dayIndex\": i, \"date\": date, \"meal\": meal_key, \"replace_recipeId\"\
+          : rid, \"candidate_ids\": [a[0] for a in alts[:5]], \"reason\": \"reduce_cost\"\
+          })\n\n            if budget > 0 and min_usage_pct > 0:\n               \
+          \ min_cost = budget * (min_usage_pct / 100.0)\n                if day_cost\
+          \ < min_cost:\n                    out[\"warnings\"].append(\"min_budget_not_met\"\
+          )\n\n            if daily_salt_max is not None:\n                salt_max\
+          \ = _safe_float(daily_salt_max, default=None)\n                if salt_max\
+          \ is not None and day_salt > salt_max:\n                    out[\"violations\"\
+          ].append({\"code\": \"salt_exceeded\", \"message\": f\"day salt {day_salt:.2f}\
+          \ > salt_max {salt_max:.2f}\", \"dayIndex\": i, \"date\": date})\n     \
+          \               if per_meal_items:\n                        meal_key, rid,\
+          \ cost, salt, cat = sorted(per_meal_items, key=lambda x: x[3], reverse=True)[0]\n\
+          \                        cand = cand_ids_by_cat.get(cat, []) if isinstance(cat,\
+          \ str) else []\n                        alts = []\n                    \
+          \    for cid in cand:\n                            if cid == rid:\n    \
+          \                            continue\n                            r = recipe_map.get(cid,\
+          \ {})\n                            alts.append((cid, _safe_float(r.get(\"\
+          salt\")), _safe_float(r.get(\"costPerServing\"))))\n                   \
+          \     alts.sort(key=lambda x: x[1])\n                        out[\"fix_hints\"\
+          ].append({\"dayIndex\": i, \"date\": date, \"meal\": meal_key, \"replace_recipeId\"\
+          : rid, \"candidate_ids\": [a[0] for a in alts[:5]], \"reason\": \"reduce_salt\"\
+          })\n\n            if daily_protein_target is not None:\n               \
+          \ pt = _safe_float(daily_protein_target, default=None)\n               \
+          \ if pt is not None and day_protein < pt:\n                    out[\"warnings\"\
+          ].append(\"protein_shortfall\")\n\n            if daily_cal_target is not\
+          \ None:\n                ct = _safe_float(daily_cal_target, default=None)\n\
+          \                if ct is not None and day_cal < ct:\n                 \
+          \   out[\"warnings\"].append(\"calories_shortfall\")\n\n            totals_by_day.append({\"\
+          date\": date, \"totals\": {\"cost_per_person\": round(day_cost, 2), \"calories\"\
+          : round(day_cal, 2), \"protein\": round(day_protein, 2), \"salt\": round(day_salt,\
+          \ 2)}})\n\n        if days > 0:\n            for rid, cnt in repeat_count.items():\n\
+          \                if days <= 3:\n                    if cnt >= 3:\n     \
+          \                   out[\"violations\"].append({\"code\": \"excessive_repeat\"\
+          , \"message\": f\"{rid} repeated {cnt} times\", \"recipeId\": rid})\n  \
+          \                  elif cnt >= 2:\n                        out[\"warnings\"\
+          ].append(\"limited_candidates_repeat\")\n\n        total_cost = sum(d[\"\
+          totals\"][\"cost_per_person\"] for d in totals_by_day) if totals_by_day\
+          \ else 0.0\n        avg_cost = (total_cost / len(totals_by_day)) if totals_by_day\
+          \ else 0.0\n        used_unique = sorted(set([x for x in used_ids_all if\
+          \ isinstance(x, str)]))\n\n        out[\"computed\"] = {\n            \"\
+          total_cost_per_person_sum\": round(total_cost, 2),\n            \"avg_cost_per_person_per_day\"\
+          : round(avg_cost, 2),\n            \"totals_by_day\": totals_by_day,\n \
+          \           \"used_recipe_ids\": used_unique\n        }\n\n        provided_used\
+          \ = draft_json.get(\"used_recipe_ids\")\n        if isinstance(provided_used,\
+          \ list):\n            provided_set = set([x for x in provided_used if isinstance(x,\
+          \ str)])\n            if set(used_unique) != provided_set:\n           \
+          \     out[\"warnings\"].append(\"used_recipe_ids_mismatch\")\n\n       \
+          \ out[\"is_valid\"] = (len(out[\"violations\"]) == 0)\n        return _finalize(out)\n\
+          \n    except Exception as e:\n        out[\"is_valid\"] = False\n      \
+          \  out[\"violations\"] = [{\"code\": \"validator_failed\", \"message\":\
+          \ str(e)}]\n        out[\"fix_hints\"] = []\n        out[\"computed\"] =\
+          \ {}\n        out[\"warnings\"] = []\n        out[\"error\"] = str(e)\n\
+          \        return _finalize(out)\n"
+        code_language: python3
+        outputs:
+          computed:
+            children: null
+            type: object
+          error:
+            children: null
+            type: string
+          fix_hints:
+            children: null
+            type: array[object]
+          is_valid:
+            children: null
+            type: boolean
+          validation_obj:
+            children: null
+            type: object
+          violations:
+            children: null
+            type: array[object]
+          warnings:
+            children: null
+            type: array[string]
+        selected: false
+        title: 📝 CODE_献立検証
+        type: code
+        variables:
+        - value_selector:
+          - '1767927502991'
+          - draft_json
+          value_type: object
+          variable: draft_json
+        - value_selector:
+          - '1768110503458'
+          - norm3
+          value_type: object
+          variable: norm3
+      height: 52
+      id: '1767928040815'
+      position:
+        x: 1572.5318305103003
+        y: 285.2139719675385
+      positionAbsolute:
+        x: 1572.5318305103003
+        y: 285.2139719675385
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import json\nimport re\nfrom datetime import datetime\n\ndef _parse_json_maybe(x,\
+          \ expect_type=None, max_depth=2):\n    # None / \"\" は空として扱う\n    if x is\
+          \ None or x == \"\":\n        if expect_type is list:\n            return\
+          \ []\n        if expect_type is dict:\n            return {}\n        return\
+          \ x\n\n    # すでに期待型ならそのまま\n    if expect_type is not None and isinstance(x,\
+          \ expect_type):\n        return x\n\n    cur = x\n    depth = 0\n    while\
+          \ depth < max_depth and isinstance(cur, str):\n        s = cur.strip()\n\
+          \        if s == \"\":\n            return [] if expect_type is list else\
+          \ {} if expect_type is dict else \"\"\n        try:\n            cur = json.loads(s)\n\
+          \        except Exception:\n            break\n        depth += 1\n\n  \
+          \  if expect_type is not None and not isinstance(cur, expect_type):\n  \
+          \      raise ValueError(f\"Expected {expect_type.__name__}, got {type(cur).__name__}\"\
+          )\n    return cur\n\ndef _to_int(x, name):\n    if isinstance(x, bool):\n\
+          \        raise ValueError(f\"{name} must be number\")\n    if isinstance(x,\
+          \ (int, float)):\n        return int(x)\n    if isinstance(x, str):\n  \
+          \      x = x.strip()\n        if x == \"\":\n            raise ValueError(f\"\
+          {name} is required\")\n        return int(float(x))\n    raise ValueError(f\"\
+          {name} must be number\")\n\ndef _to_float(x, name):\n    if isinstance(x,\
+          \ bool):\n        raise ValueError(f\"{name} must be number\")\n    if isinstance(x,\
+          \ (int, float)):\n        return float(x)\n    if isinstance(x, str):\n\
+          \        x = x.strip()\n        if x == \"\":\n            raise ValueError(f\"\
+          {name} is required\")\n        return float(x)\n    raise ValueError(f\"\
+          {name} must be number\")\n\ndef _clamp_check(v, lo, hi, name):\n    if v\
+          \ < lo or v > hi:\n        raise ValueError(f\"{name} out of range: {v}\
+          \ (expected {lo}-{hi})\")\n    return v\n\ndef _normalize_season(s):\n \
+          \   if s is None:\n        return \"auto\"\n    if not isinstance(s, str):\n\
+          \        raise ValueError(\"season must be string\")\n    s = s.strip().lower()\n\
+          \    if s == \"\" or s == \"auto\":\n        return \"auto\"\n    if s ==\
+          \ \"fall\":\n        return \"autumn\"\n    if s in [\"spring\", \"summer\"\
+          , \"autumn\", \"winter\"]:\n        return s\n    raise ValueError(f\"invalid\
+          \ season: {s}\")\n\ndef _validate_date(d):\n    if not isinstance(d, str):\n\
+          \        raise ValueError(\"start_date must be string YYYY-MM-DD\")\n  \
+          \  d = d.strip()\n    if not re.match(r\"^\\d{4}-\\d{2}-\\d{2}$\", d):\n\
+          \        raise ValueError(\"start_date must be YYYY-MM-DD\")\n    try:\n\
+          \        datetime.strptime(d, \"%Y-%m-%d\")\n    except Exception:\n   \
+          \     raise ValueError(\"start_date is not a valid date\")\n    return d\n\
+          \ndef main(**inputs):\n    try:\n        crew_count = _clamp_check(_to_int(inputs.get(\"\
+          crew_count\"), \"crew_count\"), 1, 200, \"crew_count\")\n        days =\
+          \ _clamp_check(_to_int(inputs.get(\"days\"), \"days\"), 1, 31, \"days\"\
+          )\n        budget = _clamp_check(\n            _to_float(inputs.get(\"budget_per_person_per_day\"\
+          ), \"budget_per_person_per_day\"),\n            100, 20000, \"budget_per_person_per_day\"\
+          \n        )\n        cooking_time_limit = _clamp_check(\n            _to_int(inputs.get(\"\
+          cooking_time_limit\"), \"cooking_time_limit\"),\n            5, 240, \"\
+          cooking_time_limit\"\n        )\n\n        min_budget_usage_percent = inputs.get(\"\
+          min_budget_usage_percent\", 90)\n        min_budget_usage_percent = _clamp_check(\n\
+          \            _to_float(min_budget_usage_percent, \"min_budget_usage_percent\"\
+          ),\n            0, 100, \"min_budget_usage_percent\"\n        )\n\n    \
+          \    start_date = _validate_date(inputs.get(\"start_date\"))\n        season\
+          \ = _normalize_season(inputs.get(\"season\"))\n\n        banned_ingredients\
+          \ = _parse_json_maybe(inputs.get(\"banned_ingredients\"), expect_type=list)\n\
+          \        allowed_recipe_ids = _parse_json_maybe(inputs.get(\"allowed_recipe_ids\"\
+          ), expect_type=list)\n        weekday_rules = _parse_json_maybe(inputs.get(\"\
+          weekday_rules\"), expect_type=dict)\n        recipes = _parse_json_maybe(inputs.get(\"\
+          recipes\"), expect_type=list)\n\n        # listをstring[]に寄せる\n        banned_ingredients\
+          \ = [str(x).strip() for x in banned_ingredients if str(x).strip() != \"\"\
+          ]\n        allowed_recipe_ids = [str(x).strip() for x in allowed_recipe_ids\
+          \ if str(x).strip() != \"\"]\n\n        def num(v):\n            if v is\
+          \ None or v == \"\":\n                return None\n            try:\n  \
+          \              return float(v)\n            except Exception:\n        \
+          \        return None\n\n        # recipesの最小スキーマ検証（soft drop）\n        valid\
+          \ = []\n        for r in recipes:\n            if not isinstance(r, dict):\n\
+          \                continue\n            rid = str(r.get(\"id\", \"\")).strip()\n\
+          \            name = str(r.get(\"name\", \"\")).strip()\n            cat\
+          \ = str(r.get(\"category\", \"\")).strip()\n            if rid == \"\" or\
+          \ name == \"\" or cat == \"\":\n                continue\n            valid.append({\n\
+          \                \"id\": rid,\n                \"name\": name,\n       \
+          \         \"category\": cat.lower(),\n                \"calories\": num(r.get(\"\
+          calories\")),\n                \"protein\": num(r.get(\"protein\")),\n \
+          \               \"salt\": num(r.get(\"salt\")),\n                \"costPerServing\"\
+          : num(r.get(\"costPerServing\")),\n            })\n\n        if len(valid)\
+          \ < 10:\n            raise ValueError(f\"recipes too few after validation:\
+          \ {len(valid)}\")\n\n        def opt_num(x):\n            if x is None or\
+          \ x == \"\":\n                return None\n            try:\n          \
+          \      return float(x)\n            except Exception:\n                return\
+          \ None\n\n        norm = {\n            \"crew_count\": crew_count,\n  \
+          \          \"days\": days,\n            \"budget_per_person_per_day\": budget,\n\
+          \            \"min_budget_usage_percent\": min_budget_usage_percent,\n \
+          \           \"start_date\": start_date,\n            \"season\": season,\n\
+          \            \"cooking_time_limit\": cooking_time_limit,\n            \"\
+          banned_ingredients\": banned_ingredients,\n            \"weekday_rules\"\
+          : weekday_rules,\n            \"allowed_recipe_ids\": allowed_recipe_ids,\n\
+          \            \"recipes\": valid,\n            \"daily_calorie_target\":\
+          \ opt_num(inputs.get(\"daily_calorie_target\")),\n            \"daily_protein_target\"\
+          : opt_num(inputs.get(\"daily_protein_target\")),\n            \"daily_salt_max\"\
+          : opt_num(inputs.get(\"daily_salt_max\")),\n        }\n\n        return\
+          \ {\"norm\": norm, \"error\": \"\"}\n\n    except Exception as e:\n    \
+          \    return {\"norm\": None, \"error\": str(e)}\n"
+        code_language: python3
+        outputs:
+          error:
+            children: null
+            type: string
+          norm:
+            children: null
+            type: object
+        selected: false
+        title: 📝 CODE_入力正規化
+        type: code
+        variables:
+        - value_selector:
+          - '1767921859747'
+          - crew_count
+          value_type: number
+          variable: crew_count
+        - value_selector:
+          - '1767921859747'
+          - days
+          value_type: number
+          variable: days
+        - value_selector:
+          - '1767921859747'
+          - budget_per_person_per_day
+          value_type: number
+          variable: budget_per_person_per_day
+        - value_selector:
+          - '1767921859747'
+          - min_budget_usage_percent
+          value_type: number
+          variable: min_budget_usage_percent
+        - value_selector:
+          - '1767921859747'
+          - start_date
+          value_type: string
+          variable: start_date
+        - value_selector:
+          - '1767921859747'
+          - season
+          value_type: string
+          variable: season
+        - value_selector:
+          - '1767921859747'
+          - cooking_time_limit
+          value_type: number
+          variable: cooking_time_limit
+        - value_selector:
+          - '1767921859747'
+          - banned_ingredients
+          value_type: string
+          variable: banned_ingredients
+        - value_selector:
+          - '1767921859747'
+          - weekday_rules
+          value_type: string
+          variable: weekday_rules
+        - value_selector:
+          - '1767921859747'
+          - allowed_recipe_ids
+          value_type: string
+          variable: allowed_recipe_ids
+        - value_selector:
+          - '1767921859747'
+          - recipes
+          value_type: string
+          variable: recipes
+        - value_selector:
+          - '1767921859747'
+          - daily_calorie_target
+          value_type: number
+          variable: daily_calorie_target
+        - value_selector:
+          - '1767921859747'
+          - daily_protein_target
+          value_type: number
+          variable: daily_protein_target
+        - value_selector:
+          - '1767921859747'
+          - daily_salt_max
+          value_type: number
+          variable: daily_salt_max
+      height: 52
+      id: '1768109264965'
+      position:
+        x: -876.2769396564971
+        y: 285.2139719675385
+      positionAbsolute:
+        x: -876.2769396564971
+        y: 285.2139719675385
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "def _norm_cat(cat: str) -> str:\n    c = (cat or \"\").strip().lower()\n\
+          \    if c in [\"main\", \"mains\", \"entree\", \"entrée\"]:\n        return\
+          \ \"main\"\n    if c in [\"side\", \"sides\", \"salad\"]:\n        return\
+          \ \"side\"\n    if c in [\"soup\", \"soups\"]:\n        return \"soup\"\n\
+          \    if c in [\"dessert\", \"fruit\", \"fruits\"]:\n        return \"dessert\"\
+          \n    return c\n\ndef main(**inputs):\n    # Node1でerrorが出てたら即返す\n    if\
+          \ inputs.get(\"error\"):\n        return {\"norm2\": None, \"error\": inputs[\"\
+          error\"]}\n\n    norm = inputs.get(\"norm\")\n    if not isinstance(norm,\
+          \ dict):\n        return {\"norm2\": None, \"error\": \"norm must be object\"\
+          }\n\n    recipes = norm.get(\"recipes\", [])\n    if not isinstance(recipes,\
+          \ list):\n        return {\"norm2\": None, \"error\": \"norm.recipes must\
+          \ be list\"}\n\n    banned = norm.get(\"banned_ingredients\", [])\n    if\
+          \ not isinstance(banned, list):\n        banned = []\n    banned = [str(x).strip()\
+          \ for x in banned if str(x).strip() != \"\"]\n\n    days = norm.get(\"days\"\
+          , 7)\n    try:\n        days = int(days)\n    except Exception:\n      \
+          \  days = 7\n\n    recipes_by_cat = {\"main\": [], \"side\": [], \"soup\"\
+          : [], \"dessert\": []}\n    recipe_map = {}\n    excluded = []\n\n    for\
+          \ r in recipes:\n        if not isinstance(r, dict):\n            continue\n\
+          \        rid = str(r.get(\"id\", \"\")).strip()\n        name = str(r.get(\"\
+          name\", \"\")).strip()\n        cat = _norm_cat(str(r.get(\"category\",\
+          \ \"\")).strip())\n        if rid == \"\" or name == \"\":\n           \
+          \ continue\n\n        # 禁止食材（暫定：名前部分一致）\n        hit = None\n        for\
+          \ w in banned:\n            if w and (w in name):\n                hit =\
+          \ w\n                break\n        if hit:\n            excluded.append({\"\
+          recipeId\": rid, \"name\": name, \"reason\": f\"banned_name_match:{hit}\"\
+          })\n            continue\n\n        # カテゴリ不明はPhase1は除外\n        if cat not\
+          \ in recipes_by_cat:\n            excluded.append({\"recipeId\": rid, \"\
+          name\": name, \"reason\": f\"unknown_category:{cat}\"})\n            continue\n\
+          \n        rec = {\n            \"id\": rid,\n            \"name\": name,\n\
+          \            \"category\": cat,\n            \"calories\": r.get(\"calories\"\
+          ),\n            \"protein\": r.get(\"protein\"),\n            \"salt\":\
+          \ r.get(\"salt\"),\n            \"costPerServing\": r.get(\"costPerServing\"\
+          ),\n        }\n\n        recipes_by_cat[cat].append(rec)\n        recipe_map[rid]\
+          \ = rec\n\n    counts = {\n        \"main\": len(recipes_by_cat[\"main\"\
+          ]),\n        \"side\": len(recipes_by_cat[\"side\"]),\n        \"soup\"\
+          : len(recipes_by_cat[\"soup\"]),\n        \"dessert\": len(recipes_by_cat[\"\
+          dessert\"]),\n        \"total\": sum(len(v) for v in recipes_by_cat.values()),\n\
+          \    }\n\n    # ---- 最低必要数チェック（MVP向け）----\n    # days=3 の例なら main>=3, side>=6,\
+          \ soup>=3 が必要（あなたの例は満たす）\n    required_main = max(3, days * 1)\n    required_side\
+          \ = max(4, days * 2)\n    required_soup = max(2, days * 1)\n\n    missing\
+          \ = []\n    if counts[\"main\"] < required_main:\n        missing.append({\"\
+          category\": \"main\", \"required\": required_main, \"available\": counts[\"\
+          main\"]})\n    if counts[\"side\"] < required_side:\n        missing.append({\"\
+          category\": \"side\", \"required\": required_side, \"available\": counts[\"\
+          side\"]})\n    if counts[\"soup\"] < required_soup:\n        missing.append({\"\
+          category\": \"soup\", \"required\": required_soup, \"available\": counts[\"\
+          soup\"]})\n\n    norm2 = dict(norm)\n    norm2[\"recipes_by_cat\"] = recipes_by_cat\n\
+          \    norm2[\"recipe_map\"] = recipe_map\n    norm2[\"excluded\"] = excluded\n\
+          \    norm2[\"counts\"] = counts\n    norm2[\"missing_requirements\"] = missing\n\
+          \n    if len(missing) > 0:\n        # ここで止める\n        return {\"norm2\"\
+          : norm2, \"error\": \"insufficient_recipes_by_category\"}\n\n    return\
+          \ {\"norm2\": norm2, \"error\": \"\"}\n"
+        code_language: python3
+        outputs:
+          error:
+            children: null
+            type: string
+          norm2:
+            children: null
+            type: object
+        selected: false
+        title: 📝 CODE_レシピ前処理
+        type: code
+        variables:
+        - value_selector:
+          - '1768109264965'
+          - norm
+          value_type: object
+          variable: norm
+        - value_selector:
+          - '1768109264965'
+          - error
+          value_type: string
+          variable: error
+      height: 52
+      id: '1768110009228'
+      position:
+        x: -574.2769396564971
+        y: 285.2139719675385
+      positionAbsolute:
+        x: -574.2769396564971
+        y: 285.2139719675385
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import math\n\ndef _safe_float(x):\n    try:\n        if x is None:\n\
+          \            return None\n        return float(x)\n    except Exception:\n\
+          \        return None\n\ndef _mean(xs):\n    xs = [x for x in xs if x is\
+          \ not None]\n    return sum(xs) / len(xs) if xs else None\n\ndef _score_recipe(rec,\
+          \ targets):\n    \"\"\"\n    targets: dict with\n      cost_target, cal_target,\
+          \ protein_target, salt_target (per dish)\n    \"\"\"\n    cost = _safe_float(rec.get(\"\
+          costPerServing\"))\n    cal = _safe_float(rec.get(\"calories\"))\n    protein\
+          \ = _safe_float(rec.get(\"protein\"))\n    salt = _safe_float(rec.get(\"\
+          salt\"))\n\n    score = 0.0\n    parts = {}\n\n    # --- cost distance (always\
+          \ on) ---\n    ct = targets.get(\"cost_target\")\n    if cost is not None\
+          \ and ct is not None:\n        denom = max(ct, 1.0)\n        d = abs(cost\
+          \ - ct) / denom\n        s = max(0.0, 1.0 - d)  # 0〜1\n        score +=\
+          \ 1.5 * s\n        parts[\"cost\"] = 1.5 * s\n    else:\n        parts[\"\
+          cost\"] = 0.0\n\n    # --- nutrition distance (optional) ---\n    if targets.get(\"\
+          cal_target\") is not None and cal is not None:\n        denom = max(targets[\"\
+          cal_target\"], 1.0)\n        d = abs(cal - targets[\"cal_target\"]) / denom\n\
+          \        s = max(0.0, 1.0 - d)\n        score += 0.7 * s\n        parts[\"\
+          cal\"] = 0.7 * s\n    else:\n        parts[\"cal\"] = 0.0\n\n    if targets.get(\"\
+          protein_target\") is not None and protein is not None:\n        denom =\
+          \ max(targets[\"protein_target\"], 1.0)\n        d = abs(protein - targets[\"\
+          protein_target\"]) / denom\n        s = max(0.0, 1.0 - d)\n        score\
+          \ += 1.0 * s\n        parts[\"protein\"] = 1.0 * s\n    else:\n        parts[\"\
+          protein\"] = 0.0\n\n    # --- salt penalty (optional) ---\n    if targets.get(\"\
+          salt_target\") is not None and salt is not None:\n        if salt > targets[\"\
+          salt_target\"]:\n            denom = max(targets[\"salt_target\"], 0.1)\n\
+          \            over = (salt - targets[\"salt_target\"]) / denom\n        \
+          \    p = min(1.0, over)\n            score -= 1.0 * p\n            parts[\"\
+          salt_penalty\"] = -1.0 * p\n        else:\n            parts[\"salt_penalty\"\
+          ] = 0.0\n    else:\n        parts[\"salt_penalty\"] = 0.0\n\n    return\
+          \ score, parts\n\ndef main(\n    norm2,\n    error=\"\",\n    topN_main=30,\n\
+          \    topN_side=30,\n    topN_soup=20,\n    topN_dessert=10\n):\n    # ---\
+          \ upstream error passthrough ---\n    if error:\n        return {\"norm3\"\
+          : None, \"ok\": False, \"error\": str(error)}\n\n    if not isinstance(norm2,\
+          \ dict):\n        return {\"norm3\": None, \"ok\": False, \"error\": \"\
+          norm2 must be object\"}\n\n    rbc = norm2.get(\"recipes_by_cat\")\n   \
+          \ if not isinstance(rbc, dict):\n        return {\"norm3\": None, \"ok\"\
+          : False, \"error\": \"norm2.recipes_by_cat must be object\"}\n\n    # TopN\
+          \ defaults / coercion\n    try:\n        topN = {\n            \"main\"\
+          : int(topN_main),\n            \"side\": int(topN_side),\n            \"\
+          soup\": int(topN_soup),\n            \"dessert\": int(topN_dessert),\n \
+          \       }\n    except Exception:\n        return {\"norm3\": None, \"ok\"\
+          : False, \"error\": \"topN_* must be int-castable\"}\n\n    budget = float(norm2.get(\"\
+          budget_per_person_per_day\", 0) or 0)\n\n    # Phase1の前提（必要数設計に合わせる）\n \
+          \   # 1日あたり: main x1, side x2, soup x1 (= 合計4皿)\n    cost_targets = {\n\
+          \        \"main\": budget * 0.45,\n        \"side\": budget * 0.25,\n  \
+          \      \"soup\": budget * 0.15,\n        \"dessert\": budget * 0.10,\n \
+          \   }\n\n    # 栄養ターゲット（あれば per-dish に分配）\n    cal_day = _safe_float(norm2.get(\"\
+          daily_calorie_target\"))\n    protein_day = _safe_float(norm2.get(\"daily_protein_target\"\
+          ))\n    salt_day_max = _safe_float(norm2.get(\"daily_salt_max\"))\n\n  \
+          \  cal_targets = {\n        \"main\": cal_day * 0.40 if cal_day is not None\
+          \ else None,\n        \"side\": cal_day * 0.15 if cal_day is not None else\
+          \ None,\n        \"soup\": cal_day * 0.10 if cal_day is not None else None,\n\
+          \        \"dessert\": cal_day * 0.10 if cal_day is not None else None,\n\
+          \    }\n    protein_targets = {\n        \"main\": protein_day * 0.45 if\
+          \ protein_day is not None else None,\n        \"side\": protein_day * 0.15\
+          \ if protein_day is not None else None,\n        \"soup\": protein_day *\
+          \ 0.10 if protein_day is not None else None,\n        \"dessert\": protein_day\
+          \ * 0.05 if protein_day is not None else None,\n    }\n    salt_targets\
+          \ = {\n        \"main\": salt_day_max * 0.35 if salt_day_max is not None\
+          \ else None,\n        \"side\": salt_day_max * 0.20 if salt_day_max is not\
+          \ None else None,\n        \"soup\": salt_day_max * 0.25 if salt_day_max\
+          \ is not None else None,\n        \"dessert\": salt_day_max * 0.05 if salt_day_max\
+          \ is not None else None,\n    }\n\n    candidates_by_cat = {\"main\": [],\
+          \ \"side\": [], \"soup\": [], \"dessert\": []}\n    summary = {\"by_cat\"\
+          : {}, \"topN\": topN}\n\n    for cat in [\"main\", \"side\", \"soup\", \"\
+          dessert\"]:\n        items = rbc.get(cat, [])\n        if not isinstance(items,\
+          \ list):\n            items = []\n\n        targets = {\n            \"\
+          cost_target\": cost_targets.get(cat),\n            \"cal_target\": cal_targets.get(cat),\n\
+          \            \"protein_target\": protein_targets.get(cat),\n           \
+          \ \"salt_target\": salt_targets.get(cat),\n        }\n\n        scored =\
+          \ []\n        for rec in items:\n            if not isinstance(rec, dict):\n\
+          \                continue\n            s, parts = _score_recipe(rec, targets)\n\
+          \            scored.append({\n                \"id\": rec.get(\"id\"),\n\
+          \                \"name\": rec.get(\"name\"),\n                \"category\"\
+          : cat,\n                \"costPerServing\": rec.get(\"costPerServing\"),\n\
+          \                \"calories\": rec.get(\"calories\"),\n                \"\
+          protein\": rec.get(\"protein\"),\n                \"salt\": rec.get(\"salt\"\
+          ),\n                \"score\": s,\n                # トークン削減したいなら score_breakdown\
+          \ を消してもOK\n                \"score_breakdown\": parts,\n            })\n\
+          \n        scored.sort(key=lambda x: x.get(\"score\", 0), reverse=True)\n\
+          \        take = min(len(scored), topN[cat])\n        candidates_by_cat[cat]\
+          \ = scored[:take]\n\n        summary[\"by_cat\"][cat] = {\n            \"\
+          available\": len(scored),\n            \"selected\": take,\n           \
+          \ \"avg_score_selected\": _mean([x.get(\"score\") for x in scored[:take]]),\n\
+          \            \"cost_target\": targets.get(\"cost_target\"),\n        }\n\
+          \n    norm3 = dict(norm2)\n    norm3[\"candidates_by_cat\"] = candidates_by_cat\n\
+          \    norm3[\"candidate_summary\"] = summary\n\n    return {\"norm3\": norm3,\
+          \ \"ok\": True, \"error\": \"\"}\n"
+        code_language: python3
+        outputs:
+          error:
+            children: null
+            type: string
+          norm3:
+            children: null
+            type: object
+          ok:
+            children: null
+            type: boolean
+        selected: false
+        title: 📝 CODE_候補スコアリング
+        type: code
+        variables:
+        - value_selector:
+          - '1768110009228'
+          - norm2
+          value_type: object
+          variable: norm2
+        - value_selector:
+          - '1768110009228'
+          - error
+          value_type: string
+          variable: error
+      height: 52
+      id: '1768110503458'
+      position:
+        x: -272.2769396564971
+        y: 285.2139719675385
+      positionAbsolute:
+        x: -272.2769396564971
+        y: 285.2139719675385
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        cases:
+        - case_id: 'true'
+          conditions:
+          - comparison_operator: is
+            id: e2e4a478-7edc-4905-ab0f-c73a6223478a
+            value: true
+            varType: boolean
+            variable_selector:
+            - '1768110503458'
+            - ok
+          id: 'true'
+          logical_operator: and
+        selected: false
+        title: 🔀 IF_前処理成功チェック
+        type: if-else
+      height: 124
+      id: '1768112963690'
+      position:
+        x: 64.91461628456008
+        y: 285.2139719675385
+      positionAbsolute:
+        x: 64.91461628456008
+        y: 285.2139719675385
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        outputs:
+        - value_selector:
+          - '1768110503458'
+          - error
+          value_type: string
+          variable: error
+        - value_selector:
+          - '1768110503458'
+          - norm3
+          value_type: object
+          variable: norm3
+        selected: false
+        title: 🏁 END_前処理エラー
+        type: end
+      height: 114
+      id: '1768113101172'
+      position:
+        x: 417.01567705765524
+        y: 399.0081860557676
+      positionAbsolute:
+        x: 417.01567705765524
+        y: 399.0081860557676
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        break_conditions:
+        - comparison_operator: is
+          id: e839095e-cd18-40ff-b39f-8c73e57e7447
+          value: true
+          varType: boolean
+          variable_selector:
+          - '1768116634669'
+          - is_valid
+        error_handle_mode: terminated
+        height: 263
+        logical_operator: and
+        loop_count: 2
+        loop_variables:
+        - id: b87da93d-f2ab-411f-a2cf-192bd9309cb3
+          label: attempt
+          value: '0'
+          value_type: constant
+          var_type: number
+        - id: 5c3c2a78-1662-4f90-8f45-6fb585f444b2
+          label: current_json
+          value:
+          - '1767927502991'
+          - draft_json
+          value_type: variable
+          var_type: object
+        - id: bda33747-30b1-49d3-911c-16b26b77bc3c
+          label: validation
+          value:
+          - '1767928040815'
+          - validation_obj
+          value_type: variable
+          var_type: object
+        - id: ebc107dd-0721-448c-9d64-ab8e55832dac
+          label: is_valid
+          value:
+          - '1767928040815'
+          - is_valid
+          value_type: variable
+          var_type: boolean
+        selected: false
+        start_node_id: 1768116634669start
+        title: 🔄 LOOP_修正リトライ
+        type: loop
+        width: 2500
+      height: 263
+      id: '1768116634669'
+      position:
+        x: 2193.824323456185
+        y: 459.6699324446995
+      positionAbsolute:
+        x: 2193.824323456185
+        y: 459.6699324446995
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 2500
+      zIndex: 1
+    - data:
+        desc: ''
+        isInLoop: true
+        selected: false
+        title: ''
+        type: loop-start
+      draggable: false
+      height: 48
+      id: 1768116634669start
+      parentId: '1768116634669'
+      position:
+        x: 24
+        y: 68
+      positionAbsolute:
+        x: 2217.824323456185
+        y: 527.6699324446995
+      selectable: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom-loop-start
+      width: 44
+      zIndex: 1002
+    - data:
+        cases:
+        - case_id: 'true'
+          conditions:
+          - comparison_operator: is
+            id: 01b3e339-fb8b-4a02-9bad-3d51f23f246c
+            value: true
+            varType: boolean
+            variable_selector:
+            - '1767928040815'
+            - is_valid
+          id: 'true'
+          logical_operator: and
+        selected: false
+        title: 🔀 IF_初回検証成功チェック
+        type: if-else
+      height: 124
+      id: '1768117209901'
+      position:
+        x: 1898.58915253319
+        y: 285.2139719675385
+      positionAbsolute:
+        x: 1898.58915253319
+        y: 285.2139719675385
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "from datetime import datetime, timedelta\n\ndef _dates(start_date:\
+          \ str, days: int):\n    d0 = datetime.strptime(start_date, \"%Y-%m-%d\"\
+          )\n    return [(d0 + timedelta(days=i)).strftime(\"%Y-%m-%d\") for i in\
+          \ range(days)]\n\ndef _as_list(x):\n    return x if isinstance(x, list)\
+          \ else []\n\ndef _uniq_preserve(xs):\n    seen = set()\n    out = []\n \
+          \   for x in xs:\n        if x in seen:\n            continue\n        seen.add(x)\n\
+          \        out.append(x)\n    return out\n\ndef _sum_day(recipe_ids, recipe_map):\n\
+          \    cost = cal = protein = salt = 0.0\n    for rid in recipe_ids:\n   \
+          \     r = recipe_map.get(rid)\n        if not isinstance(r, dict):\n   \
+          \         continue\n        cost += float(r.get(\"costPerServing\", 0) or\
+          \ 0)\n        cal += float(r.get(\"calories\", 0) or 0)\n        protein\
+          \ += float(r.get(\"protein\", 0) or 0)\n        salt += float(r.get(\"salt\"\
+          , 0) or 0)\n    return {\n        \"cost_per_person\": round(cost, 2),\n\
+          \        \"calories\": round(cal, 2),\n        \"protein\": round(protein,\
+          \ 2),\n        \"salt\": round(salt, 2),\n    }\n\ndef main(draft_json,\
+          \ norm3, warnings=None):\n    try:\n        if not isinstance(draft_json,\
+          \ dict):\n            return {\"final\": None, \"ok\": False, \"error\"\
+          : \"draft_json must be object\"}\n\n        recipe_map = norm3.get(\"recipe_map\"\
+          )\n        if not isinstance(recipe_map, dict):\n            return {\"\
+          final\": None, \"ok\": False, \"error\": \"norm3.recipe_map missing\"}\n\
+          \n        days = int(norm3.get(\"days\", 0) or 0)\n        start_date =\
+          \ norm3.get(\"start_date\")\n        if not start_date or days <= 0:\n \
+          \           return {\"final\": None, \"ok\": False, \"error\": \"norm3.days/start_date\
+          \ invalid\"}\n\n        expected_dates = _dates(start_date, days)\n    \
+          \    budget = float(norm3.get(\"budget_per_person_per_day\", 0) or 0)\n\
+          \        min_usage = float(norm3.get(\"min_budget_usage_percent\", 0) or\
+          \ 0)\n        salt_max = norm3.get(\"daily_salt_max\")\n        salt_max\
+          \ = float(salt_max) if salt_max is not None else None\n\n        plan =\
+          \ draft_json.get(\"plan\")\n        if not isinstance(plan, list):\n   \
+          \         return {\"final\": None, \"ok\": False, \"error\": \"draft_json.plan\
+          \ must be array\"}\n\n        # plan件数がズレてても落とす（trueルート前提なので厳しめ）\n     \
+          \   if len(plan) != days:\n            return {\"final\": None, \"ok\":\
+          \ False, \"error\": f\"plan length {len(plan)} != days {days}\"}\n\n   \
+          \     # date連続チェック（順不同なら並び替えたい場合はここでsortしてもOKだが、方針固定なので落とす）\n        for\
+          \ i, day in enumerate(plan):\n            if not isinstance(day, dict):\n\
+          \                return {\"final\": None, \"ok\": False, \"error\": f\"\
+          plan[{i}] must be object\"}\n            if day.get(\"date\") != expected_dates[i]:\n\
+          \                return {\"final\": None, \"ok\": False, \"error\": f\"\
+          date mismatch at index {i}: {day.get('date')} != {expected_dates[i]}\"}\n\
+          \n            meals = day.get(\"meals\")\n            if not isinstance(meals,\
+          \ dict):\n                return {\"final\": None, \"ok\": False, \"error\"\
+          : f\"plan[{i}].meals must be object\"}\n\n            # breakfast/lunch/dinner\
+          \ 必須\n            for meal_name in [\"breakfast\", \"lunch\", \"dinner\"\
+          ]:\n                m = meals.get(meal_name)\n                if not isinstance(m,\
+          \ dict):\n                    return {\"final\": None, \"ok\": False, \"\
+          error\": f\"plan[{i}].meals.{meal_name} must be object\"}\n            \
+          \    rids = m.get(\"recipe_ids\")\n                if not isinstance(rids,\
+          \ list):\n                    return {\"final\": None, \"ok\": False, \"\
+          error\": f\"plan[{i}].meals.{meal_name}.recipe_ids must be array\"}\n\n\
+          \                # id存在チェック（最終構造検証なので厳密に）\n                for rid in rids:\n\
+          \                    if rid not in recipe_map:\n                       \
+          \ return {\"final\": None, \"ok\": False, \"error\": f\"unknown recipe_id\
+          \ at dayIndex={i} meal={meal_name}: {rid}\"}\n\n        # totalsをrecipe_mapから再計算して上書き（LLM\
+          \ totalsは信用しない）\n        used_ids = []\n        totals_by_day = []\n   \
+          \     for i, day in enumerate(plan):\n            all_ids = []\n       \
+          \     for meal_name in [\"breakfast\", \"lunch\", \"dinner\"]:\n       \
+          \         all_ids.extend(day[\"meals\"][meal_name][\"recipe_ids\"])\n  \
+          \          used_ids.extend(all_ids)\n\n            totals = _sum_day(all_ids,\
+          \ recipe_map)\n            day[\"totals\"] = totals  # 上書き\n           \
+          \ totals_by_day.append({\"date\": day[\"date\"], \"totals\": totals})\n\n\
+          \        used_ids = _uniq_preserve(used_ids)\n\n        avg_cost = round(sum(d[\"\
+          totals\"][\"cost_per_person\"] for d in totals_by_day) / days, 2)\n\n  \
+          \      # summary.warnings：検証ノードのwarningsを引き継ぎつつ、念のためここでも軽く補足\n        w\
+          \ = _as_list(warnings)\n        # 安全側で追加（本来trueなら入らないはずだが、ズレたらここで出る）\n \
+          \       for d in totals_by_day:\n            if budget > 0 and d[\"totals\"\
+          ][\"cost_per_person\"] > budget:\n                w.append(\"budget_limit_exceeded\"\
+          )\n            if salt_max is not None and d[\"totals\"][\"salt\"] > salt_max:\n\
+          \                w.append(\"salt_max_exceeded\")\n            if min_usage\
+          \ > 0 and budget > 0:\n                if d[\"totals\"][\"cost_per_person\"\
+          ] < budget * (min_usage / 100.0):\n                    w.append(\"min_budget_not_met\"\
+          )\n\n        w = _uniq_preserve(w)\n\n        final = {\n            \"\
+          plan\": plan,\n            \"used_recipe_ids\": used_ids,\n            \"\
+          summary\": {\n                \"total_cost_per_person_per_day_avg\": avg_cost,\n\
+          \                \"warnings\": w\n            }\n        }\n\n        return\
+          \ {\"final\": final, \"ok\": True, \"error\": \"\"}\n\n    except Exception\
+          \ as e:\n        return {\"final\": None, \"ok\": False, \"error\": f\"\
+          final_validation_failed: {str(e)}\"}\n"
+        code_language: python3
+        outputs:
+          error:
+            children: null
+            type: string
+          final:
+            children: null
+            type: object
+          ok:
+            children: null
+            type: boolean
+        selected: false
+        title: 📝 CODE_最終構造検証
+        type: code
+        variables:
+        - value_selector:
+          - '1767927502991'
+          - draft_json
+          value_type: object
+          variable: draft_json
+        - value_selector:
+          - '1768110503458'
+          - norm3
+          value_type: object
+          variable: norm3
+        - value_selector:
+          - '1767928040815'
+          - warnings
+          value_type: array[string]
+          variable: warnings
+      height: 52
+      id: '1768117237001'
+      position:
+        x: 2215.0821913619166
+        y: 285.2139719675385
+      positionAbsolute:
+        x: 2215.0821913619166
+        y: 285.2139719675385
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        outputs:
+        - value_selector:
+          - '1768117237001'
+          - final
+          value_type: object
+          variable: final
+        selected: false
+        title: 🏁 END_初回成功出力
+        type: end
+      height: 88
+      id: '1768117508202'
+      position:
+        x: 2517.0821913619166
+        y: 285.2139719675385
+      positionAbsolute:
+        x: 2517.0821913619166
+        y: 285.2139719675385
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import json\n\ndef _as_list(x):\n    return x if isinstance(x, list)\
+          \ else []\n\ndef _as_dict(x):\n    return x if isinstance(x, dict) else\
+          \ {}\n\ndef _safe_int(x, default=0):\n    try:\n        return int(x)\n\
+          \    except Exception:\n        return default\n\ndef _pick_fixes(fix_hints,\
+          \ max_changes=3):\n    \"\"\"\n    優先順位:\n      reduce_cost → reduce_salt\
+          \ → その他\n    かつ、同じ(dayIndex, meal, replace_recipeId)は重複除去\n    \"\"\"\n\
+          \    def prio(h):\n        r = str(h.get(\"reason\", \"\"))\n        if\
+          \ r == \"reduce_cost\":\n            return 0\n        if r == \"reduce_salt\"\
+          :\n            return 1\n        return 2\n\n    uniq = []\n    seen = set()\n\
+          \    for h in sorted(_as_list(fix_hints), key=prio):\n        key = (h.get(\"\
+          dayIndex\"), h.get(\"meal\"), h.get(\"replace_recipeId\"), h.get(\"reason\"\
+          ))\n        if key in seen:\n            continue\n        seen.add(key)\n\
+          \        # candidate_ids は必ず list に寄せる\n        h = _as_dict(h)\n      \
+          \  h[\"candidate_ids\"] = _as_list(h.get(\"candidate_ids\"))\n        uniq.append(h)\n\
+          \        if len(uniq) >= max_changes:\n            break\n    return uniq\n\
+          \ndef _id_list_from_candidates(norm3):\n    cbc = _as_dict(norm3.get(\"\
+          candidates_by_cat\"))\n    out = {}\n    for cat, lst in cbc.items():\n\
+          \        ids = []\n        for r in _as_list(lst):\n            if isinstance(r,\
+          \ dict) and isinstance(r.get(\"id\"), str):\n                ids.append(r[\"\
+          id\"])\n        out[str(cat)] = ids\n    return out\n\ndef main(current_json,\
+          \ validation, attempt, norm3):\n    try:\n        current_json = _as_dict(current_json)\n\
+          \        validation = _as_dict(validation)\n        norm3 = _as_dict(norm3)\n\
+          \n        attempt_i = _safe_int(attempt, 0)\n\n        budget = norm3.get(\"\
+          budget_per_person_per_day\")\n        salt_max = norm3.get(\"daily_salt_max\"\
+          )\n        days = norm3.get(\"days\")\n        start_date = norm3.get(\"\
+          start_date\")\n\n        violations = _as_list(validation.get(\"violations\"\
+          ))\n        fix_hints = _as_list(validation.get(\"fix_hints\"))\n\n    \
+          \    # 1イテレーションで直す箇所（最大3箇所）\n        selected = _pick_fixes(fix_hints, max_changes=3)\n\
+          \n        # ルール情報（候補ID一覧）\n        ids_by_cat = _id_list_from_candidates(norm3)\n\
+          \n        # プロンプト生成（LLM②に渡す）\n        prompt = []\n        prompt.append(\"\
+          You are a strict JSON-only editor.\")\n        prompt.append(\"Output ONLY\
+          \ valid JSON. No markdown, no commentary.\")\n        prompt.append(\"\"\
+          )\n        prompt.append(\"## Task\")\n        prompt.append(\"You will\
+          \ receive a meal plan JSON. Fix it with MINIMAL changes to reduce validation\
+          \ violations.\")\n        prompt.append(\"Do NOT regenerate everything.\
+          \ Only replace specified recipe_ids.\")\n        prompt.append(\"\")\n \
+          \       prompt.append(\"## Hard rules\")\n        prompt.append(\"- Keep\
+          \ schema exactly the same: { plan: [...], used_recipe_ids: [...], summary:\
+          \ {...} }\")\n        prompt.append(\"- Keep plan length, dates, and meal\
+          \ keys unchanged.\")\n        prompt.append(\"- Only use recipe IDs that\
+          \ exist in the candidate lists. Never invent IDs.\")\n        prompt.append(\"\
+          - Modify only the meals/dayIndex listed in Required edits. Everything else\
+          \ must remain identical.\")\n        prompt.append(\"\")\n        prompt.append(\"\
+          ## Constraints (targets)\")\n        prompt.append(f\"- budget_per_person_per_day:\
+          \ {budget}\")\n        prompt.append(f\"- daily_salt_max: {salt_max}\")\n\
+          \        prompt.append(f\"- days: {days}, start_date: {start_date}\")\n\
+          \        prompt.append(\"\")\n        prompt.append(\"## Candidate recipe\
+          \ IDs by category (allowed)\")\n        prompt.append(json.dumps(ids_by_cat,\
+          \ ensure_ascii=False))\n        prompt.append(\"\")\n        prompt.append(\"\
+          ## Current JSON to edit\")\n        prompt.append(json.dumps(current_json,\
+          \ ensure_ascii=False))\n        prompt.append(\"\")\n        prompt.append(\"\
+          ## Validation violations (for context)\")\n        prompt.append(json.dumps(violations,\
+          \ ensure_ascii=False))\n        prompt.append(\"\")\n        prompt.append(\"\
+          ## Required edits (do these first)\")\n        if not selected:\n      \
+          \      prompt.append(\"No fix_hints provided. Try to reduce cost and salt\
+          \ by replacing the most expensive and most salty recipes with cheaper/lower-salt\
+          \ candidates within the same category. Keep changes minimal.\")\n      \
+          \  else:\n            # 指示を明確に\n            for idx, h in enumerate(selected,\
+          \ start=1):\n                prompt.append(\n                    f\"{idx}.\
+          \ dayIndex={h.get('dayIndex')} date={h.get('date')} meal={h.get('meal')}:\
+          \ \"\n                    f\"Replace recipeId '{h.get('replace_recipeId')}'\
+          \ with ONE of these candidate_ids: {h.get('candidate_ids')} \"\n       \
+          \             f\"(reason={h.get('reason')}).\"\n                )\n\n  \
+          \      fix_prompt = \"\\n\".join(prompt)\n\n        return {\n         \
+          \   \"fix_prompt\": fix_prompt,\n            \"selected_fixes\": selected,\
+          \  # array<object>\n            \"error\": \"\"\n        }\n\n    except\
+          \ Exception as e:\n        return {\n            \"fix_prompt\": \"\",\n\
+          \            \"selected_fixes\": [],\n            \"error\": f\"fix_prompt_generation_failed:\
+          \ {str(e)}\"\n        }\n"
+        code_language: python3
+        isInIteration: false
+        isInLoop: true
+        loop_id: '1768116634669'
+        outputs:
+          error:
+            children: null
+            type: string
+          fix_prompt:
+            children: null
+            type: string
+          selected_fixes:
+            children: null
+            type: array[object]
+        selected: false
+        title: 📝 CODE_修正プロンプト生成
+        type: code
+        variables:
+        - value_selector:
+          - '1768116634669'
+          - current_json
+          value_type: object
+          variable: current_json
+        - value_selector:
+          - '1767928040815'
+          - validation_obj
+          value_type: object
+          variable: validation
+        - value_selector:
+          - '1768116634669'
+          - attempt
+          value_type: number
+          variable: attempt
+        - value_selector:
+          - '1768110503458'
+          - norm3
+          value_type: object
+          variable: norm3
+      height: 52
+      id: '1768118999905'
+      parentId: '1768116634669'
+      position:
+        x: 476.408752476917
+        y: 67.2878619464077
+      positionAbsolute:
+        x: 2670.233075933102
+        y: 526.9577943911072
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+      zIndex: 1002
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        isInIteration: false
+        isInLoop: true
+        loop_id: '1768116634669'
+        model:
+          completion_params:
+            temperature: 0.3
+            thinking_level: Low
+          mode: chat
+          name: gemini-3-flash-preview
+          provider: langgenius/gemini/google
+        prompt_template:
+        - id: c191cb57-a64c-4c8f-bcd3-9f4a6572df89
+          role: system
+          text: 'You are a strict JSON-only editor. Output only valid JSON.
+
+            Do not output markdown. Do not output code fences. Do not output explanations.
+
+            '
+        - id: 4471b027-a39a-4fbe-a174-f8fd543f8394
+          role: user
+          text: '{{#1768118999905.fix_prompt#}}'
+        reasoning_format: separated
+        selected: false
+        title: 🤖 LLM_献立修正
+        type: llm
+        vision:
+          enabled: false
+      height: 88
+      id: '1768119249124'
+      parentId: '1768116634669'
+      position:
+        x: 785.1113622320227
+        y: 65
+      positionAbsolute:
+        x: 2978.9356856882077
+        y: 524.6699324446995
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+      zIndex: 1002
+    - data:
+        code: "import json\nimport re\n\ndef _extract_first_json_object(s: str):\n\
+          \    \"\"\"\n    文字列から最初に現れる JSON object/array をざっくり抽出して json.loads する。\n\
+          \    LLMが前後に余計な文字を出しても拾えるようにする。\n    \"\"\"\n    if not isinstance(s, str):\n\
+          \        return None, \"text must be string\"\n\n    s = s.strip()\n\n \
+          \   # まずは全体がJSONとして読めるか\n    try:\n        return json.loads(s), \"\"\n\
+          \    except Exception:\n        pass\n\n    # ```json ... ``` を剥がす\n   \
+          \ fenced = re.search(r\"```(?:json)?\\s*(\\{.*?\\}|\\[.*?\\])\\s*```\",\
+          \ s, re.DOTALL)\n    if fenced:\n        try:\n            return json.loads(fenced.group(1)),\
+          \ \"\"\n        except Exception as e:\n            return None, f\"failed\
+          \ to parse fenced json: {e}\"\n\n    # 最初の { ... } or [ ... ] を大きめに抜く（厳密ではないが実用的）\n\
+          \    m = re.search(r\"(\\{[\\s\\S]*\\}|\\[[\\s\\S]*\\])\", s)\n    if not\
+          \ m:\n        return None, \"no json object/array found\"\n\n    candidate\
+          \ = m.group(1).strip()\n    try:\n        return json.loads(candidate),\
+          \ \"\"\n    except Exception as e:\n        return None, f\"failed to parse\
+          \ extracted json: {e}\"\n\ndef main(text):\n    obj, err = _extract_first_json_object(text)\n\
+          \    if err:\n        return {\"fixed_json\": None, \"ok\": False, \"error\"\
+          : err}\n    if not isinstance(obj, (dict, list)):\n        return {\"fixed_json\"\
+          : None, \"ok\": False, \"error\": \"parsed json is not object/array\"}\n\
+          \    # 本ワークフローは object 前提\n    if isinstance(obj, list):\n        return\
+          \ {\"fixed_json\": None, \"ok\": False, \"error\": \"parsed json is array;\
+          \ expected object\"}\n    return {\"fixed_json\": obj, \"ok\": True, \"\
+          error\": \"\"}\n"
+        code_language: python3
+        isInIteration: false
+        isInLoop: true
+        loop_id: '1768116634669'
+        outputs:
+          error:
+            children: null
+            type: string
+          fixed_json:
+            children: null
+            type: object
+          ok:
+            children: null
+            type: boolean
+        selected: false
+        title: 📝 CODE_JSON抽出2
+        type: code
+        variables:
+        - value_selector:
+          - '1768119249124'
+          - text
+          value_type: string
+          variable: text
+      height: 52
+      id: '1768119352136'
+      parentId: '1768116634669'
+      position:
+        x: 1104.592608248894
+        y: 65
+      positionAbsolute:
+        x: 3298.416931705079
+        y: 524.6699324446995
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+      zIndex: 1002
+    - data:
+        code: "from datetime import datetime, timedelta\n\n# =========================\n\
+          # Utils (safe)\n# =========================\ndef _safe_list(x):\n    return\
+          \ x if isinstance(x, list) else []\n\ndef _safe_dict(x):\n    return x if\
+          \ isinstance(x, dict) else {}\n\ndef _to_float(x, default=0.0):\n    try:\n\
+          \        return float(x)\n    except Exception:\n        return float(default)\n\
+          \ndef _to_int(x, default=0):\n    try:\n        return int(x)\n    except\
+          \ Exception:\n        return int(default)\n\ndef _dates(start_date: str,\
+          \ days: int):\n    d0 = datetime.strptime(start_date, \"%Y-%m-%d\")\n  \
+          \  return [(d0 + timedelta(days=i)).strftime(\"%Y-%m-%d\") for i in range(days)]\n\
+          \ndef _uniq_preserve(xs):\n    seen = set()\n    out = []\n    for x in\
+          \ xs:\n        if x in seen:\n            continue\n        seen.add(x)\n\
+          \        out.append(x)\n    return out\n\ndef _build_recipe_map(norm3: dict):\n\
+          \    norm3 = _safe_dict(norm3)\n    rm = _safe_dict(norm3.get(\"recipe_map\"\
+          ))\n    if rm:\n        return rm\n\n    rm = {}\n    for src_key in [\"\
+          recipes\", \"recipes_all\"]:\n        for r in _safe_list(norm3.get(src_key)):\n\
+          \            r = _safe_dict(r)\n            rid = r.get(\"id\")\n      \
+          \      if isinstance(rid, str):\n                rm[rid] = r\n\n    rbc\
+          \ = _safe_dict(norm3.get(\"recipes_by_cat\"))\n    for _, arr in rbc.items():\n\
+          \        for r in _safe_list(arr):\n            r = _safe_dict(r)\n    \
+          \        rid = r.get(\"id\")\n            if isinstance(rid, str):\n   \
+          \             rm[rid] = r\n\n    cbc = _safe_dict(norm3.get(\"candidates_by_cat\"\
+          ))\n    for _, arr in cbc.items():\n        for r in _safe_list(arr):\n\
+          \            r = _safe_dict(r)\n            rid = r.get(\"id\")\n      \
+          \      if isinstance(rid, str):\n                rm[rid] = r\n\n    return\
+          \ rm\n\ndef _allowed_ids(norm3: dict, recipe_map: dict):\n    norm3 = _safe_dict(norm3)\n\
+          \    ids = _safe_list(norm3.get(\"allowed_recipe_ids\"))\n    if not ids:\n\
+          \        ids = _safe_list(norm3.get(\"allowedRecipeIds\"))\n    ids = [x\
+          \ for x in ids if isinstance(x, str)]\n    if not ids:\n        ids = list(_safe_dict(recipe_map).keys())\n\
+          \    return ids\n\ndef _sum_ids(recipe_ids, recipe_map):\n    cost = cal\
+          \ = protein = salt = 0.0\n    for rid in recipe_ids:\n        r = recipe_map.get(rid)\n\
+          \        if not isinstance(r, dict):\n            continue\n        cost\
+          \ += _to_float(r.get(\"costPerServing\", 0))\n        cal += _to_float(r.get(\"\
+          calories\", 0))\n        protein += _to_float(r.get(\"protein\", 0))\n \
+          \       salt += _to_float(r.get(\"salt\", 0))\n    return {\n        \"\
+          cost_per_person\": round(cost, 2),\n        \"calories\": round(cal, 2),\n\
+          \        \"protein\": round(protein, 2),\n        \"salt\": round(salt,\
+          \ 2),\n    }\n\ndef _meal_totals(meals, recipe_map):\n    out = {}\n   \
+          \ for m in [\"breakfast\", \"lunch\", \"dinner\"]:\n        rids = _safe_list(_safe_dict(meals.get(m)).get(\"\
+          recipe_ids\"))\n        rids = [x for x in rids if isinstance(x, str)]\n\
+          \        out[m] = _sum_ids(rids, recipe_map)\n    return out\n\ndef _pick_recipe_to_replace(recipe_ids,\
+          \ recipe_map, mode=\"budget\"):\n    best_rid = None\n    best_val = None\n\
+          \    for rid in recipe_ids:\n        r = recipe_map.get(rid, {})\n     \
+          \   if not isinstance(r, dict):\n            continue\n        val = _to_float(r.get(\"\
+          salt\" if mode == \"salt\" else \"costPerServing\", 0))\n        if best_val\
+          \ is None or val > best_val:\n            best_val = val\n            best_rid\
+          \ = rid\n    return best_rid\n\ndef _rank_candidates(allowed_ids, recipe_map,\
+          \ mode=\"budget\", exclude_set=None, same_category=None, topk=3):\n    exclude_set\
+          \ = exclude_set or set()\n    items = []\n    for rid in allowed_ids:\n\
+          \        if rid in exclude_set:\n            continue\n        r = recipe_map.get(rid)\n\
+          \        if not isinstance(r, dict):\n            continue\n        if same_category\
+          \ and r.get(\"category\") != same_category:\n            continue\n\n  \
+          \      cost = _to_float(r.get(\"costPerServing\", 0))\n        salt = _to_float(r.get(\"\
+          salt\", 0))\n        score = _to_float(r.get(\"score\", 0))\n\n        key\
+          \ = (salt, cost, -score) if mode == \"salt\" else (cost, salt, -score)\n\
+          \        items.append((key, rid))\n\n    items.sort(key=lambda x: x[0])\n\
+          \    return [rid for _, rid in items[:topk]]\n\ndef _normalize_fix_hints(x):\n\
+          \    \"\"\"\n    Dify出力検証で fix_hints が object 指定の場合に落ちないようにする。\n    - dict\
+          \ -> そのまま\n    - list -> {\"items\": list}\n    - other -> {}\n    \"\"\"\
+          \n    if isinstance(x, dict):\n        return x\n    if isinstance(x, list):\n\
+          \        return {\"items\": x}\n    return {}\n\ndef _pack(validation_obj):\n\
+          \    \"\"\"\n    トップレベルに必須パラメータを必ず展開しつつ、\n    fix_hints は必ず object に矯正する。\n\
+          \    \"\"\"\n    validation_obj = _safe_dict(validation_obj)\n    fh = _normalize_fix_hints(validation_obj.get(\"\
+          fix_hints\"))\n\n    # validation_obj 側も fix_hints を object に上書き\n    validation_obj[\"\
+          fix_hints\"] = fh\n\n    return {\n        \"validation_obj\": validation_obj,\n\
+          \        \"is_valid\": bool(validation_obj.get(\"is_valid\", False)),\n\
+          \        \"violations\": _safe_list(validation_obj.get(\"violations\")),\n\
+          \        \"fix_hints\": fh,  # <- object確定\n        \"computed\": _safe_dict(validation_obj.get(\"\
+          computed\")),\n        \"warnings\": _safe_list(validation_obj.get(\"warnings\"\
+          )),\n        \"error\": str(validation_obj.get(\"error\", \"\")),\n    }\n\
+          \ndef _unwrap_inputs(draft_json, norm3, kwargs):\n    if draft_json is None:\n\
+          \        draft_json = kwargs.get(\"draft_json\") or kwargs.get(\"current_json\"\
+          )\n    if norm3 is None:\n        norm3 = kwargs.get(\"norm3\")\n\n    if\
+          \ norm3 is None and isinstance(draft_json, dict):\n        container = draft_json\n\
+          \        if \"norm3\" in container:\n            norm3 = container.get(\"\
+          norm3\")\n        if \"draft_json\" in container:\n            draft_json\
+          \ = container.get(\"draft_json\")\n        elif \"current_json\" in container:\n\
+          \            draft_json = container.get(\"current_json\")\n\n    return\
+          \ _safe_dict(draft_json), _safe_dict(norm3)\n\n# =========================\n\
+          # Main\n# =========================\ndef main(draft_json=None, norm3=None,\
+          \ **kwargs):\n    try:\n        draft_json, norm3 = _unwrap_inputs(draft_json,\
+          \ norm3, kwargs)\n\n        recipe_map = _build_recipe_map(norm3)\n    \
+          \    if not recipe_map:\n            return _pack({\n                \"\
+          is_valid\": False,\n                \"violations\": [],\n              \
+          \  \"fix_hints\": {\"items\": []},   # <- object\n                \"computed\"\
+          : {},\n                \"warnings\": [],\n                \"error\": \"\
+          norm3.recipe_map (or recipes) missing\"\n            })\n\n        allowed_ids\
+          \ = _allowed_ids(norm3, recipe_map)\n        allowed_set = set([x for x\
+          \ in allowed_ids if isinstance(x, str)])\n\n        # 制約\n        days =\
+          \ _to_int(norm3.get(\"days\", 0), 0)\n        start_date = norm3.get(\"\
+          start_date\")\n        budget = _to_float(norm3.get(\"budget_per_person_per_day\"\
+          , 0.0), 0.0)\n        salt_max = norm3.get(\"daily_salt_max\", None)\n \
+          \       salt_max = _to_float(salt_max, None) if salt_max is not None else\
+          \ None\n        min_usage = norm3.get(\"min_budget_usage_percent\", None)\n\
+          \        min_usage = _to_float(min_usage, None) if min_usage is not None\
+          \ else None\n        max_repeat = norm3.get(\"max_repeat_per_recipe\", None)\n\
+          \        max_repeat = _to_int(max_repeat, 2) if max_repeat is not None else\
+          \ 2\n\n        plan = draft_json.get(\"plan\")\n        if not isinstance(plan,\
+          \ list):\n            return _pack({\n                \"is_valid\": False,\n\
+          \                \"violations\": [{\"code\": \"schema_error\", \"message\"\
+          : \"draft_json.plan must be array\"}],\n                \"fix_hints\": {\"\
+          items\": []},   # <- object\n                \"computed\": {},\n       \
+          \         \"warnings\": [],\n                \"error\": \"\"\n         \
+          \   })\n\n        violations = []\n        warnings = []\n        fix_items\
+          \ = []  # <- listはここに貯める（最後にobjectへラップ）\n\n        # 日数・日付\n        if days\
+          \ > 0 and len(plan) != days:\n            violations.append({\n        \
+          \        \"code\": \"schema_error\",\n                \"message\": f\"plan\
+          \ length {len(plan)} != days {days}\"\n            })\n\n        if start_date\
+          \ and days > 0:\n            expected_dates = _dates(start_date, days)\n\
+          \            for i in range(min(len(plan), len(expected_dates))):\n    \
+          \            d = _safe_dict(plan[i]).get(\"date\")\n                if d\
+          \ != expected_dates[i]:\n                    violations.append({\n     \
+          \                   \"code\": \"date_mismatch\",\n                     \
+          \   \"dayIndex\": i,\n                        \"date\": d,\n           \
+          \             \"message\": f\"date '{d}' != expected '{expected_dates[i]}'\"\
+          \n                    })\n\n        totals_by_day = []\n        all_used\
+          \ = []\n        per_slot = {}  # (dayIndex, meal) -> [ids]\n\n        #\
+          \ 走査\n        for i, day in enumerate(plan):\n            day = _safe_dict(day)\n\
+          \            date = day.get(\"date\")\n            meals = _safe_dict(day.get(\"\
+          meals\"))\n\n            if not meals:\n                violations.append({\n\
+          \                    \"code\": \"schema_error\",\n                    \"\
+          dayIndex\": i,\n                    \"date\": date,\n                  \
+          \  \"message\": \"meals missing\"\n                })\n                continue\n\
+          \n            for meal_name in [\"breakfast\", \"lunch\", \"dinner\"]:\n\
+          \                m = _safe_dict(meals.get(meal_name))\n                rids\
+          \ = _safe_list(m.get(\"recipe_ids\"))\n                if not isinstance(rids,\
+          \ list):\n                    violations.append({\n                    \
+          \    \"code\": \"schema_error\",\n                        \"dayIndex\":\
+          \ i,\n                        \"date\": date,\n                        \"\
+          meal\": meal_name,\n                        \"message\": \"recipe_ids must\
+          \ be array\"\n                    })\n                    rids = []\n  \
+          \              rids = [x for x in rids if isinstance(x, str)]\n        \
+          \        per_slot[(i, meal_name)] = rids\n                all_used.extend(rids)\n\
+          \n                for rid in rids:\n                    if rid not in allowed_set:\n\
+          \                        violations.append({\n                         \
+          \   \"code\": \"unknown_recipe_id\",\n                            \"dayIndex\"\
+          : i,\n                            \"date\": date,\n                    \
+          \        \"meal\": meal_name,\n                            \"recipeId\"\
+          : rid,\n                            \"message\": f\"not in allowed set:\
+          \ {rid}\"\n                        })\n                    elif rid not\
+          \ in recipe_map:\n                        violations.append({\n        \
+          \                    \"code\": \"unknown_recipe_id\",\n                \
+          \            \"dayIndex\": i,\n                            \"date\": date,\n\
+          \                            \"meal\": meal_name,\n                    \
+          \        \"recipeId\": rid,\n                            \"message\": f\"\
+          not found in recipe_map: {rid}\"\n                        })\n\n       \
+          \     day_all = []\n            for meal_name in [\"breakfast\", \"lunch\"\
+          , \"dinner\"]:\n                day_all.extend(per_slot.get((i, meal_name),\
+          \ []))\n\n            day_totals = _sum_ids(day_all, recipe_map)\n     \
+          \       meal_totals = _meal_totals(meals, recipe_map)\n\n            totals_by_day.append({\"\
+          date\": date, \"totals\": day_totals})\n\n            # budget\n       \
+          \     if budget > 0 and day_totals[\"cost_per_person\"] > budget:\n    \
+          \            target_meal = max(\n                    [\"breakfast\", \"\
+          lunch\", \"dinner\"],\n                    key=lambda m: meal_totals[m][\"\
+          cost_per_person\"]\n                )\n                violations.append({\n\
+          \                    \"code\": \"budget_exceeded\",\n                  \
+          \  \"dayIndex\": i,\n                    \"date\": date,\n             \
+          \       \"message\": f\"day cost_per_person {day_totals['cost_per_person']:.2f}\
+          \ > budget {budget:.2f}\"\n                })\n                current_rids\
+          \ = per_slot.get((i, target_meal), [])\n                replace_id = _pick_recipe_to_replace(current_rids,\
+          \ recipe_map, mode=\"budget\")\n                if isinstance(replace_id,\
+          \ str):\n                    same_cat = _safe_dict(recipe_map.get(replace_id)).get(\"\
+          category\")\n                    candidates = _rank_candidates(\n      \
+          \                  allowed_ids, recipe_map,\n                        mode=\"\
+          budget\",\n                        exclude_set=set(current_rids),\n    \
+          \                    same_category=same_cat,\n                        topk=3\n\
+          \                    )\n                    if len(candidates) < 3:\n  \
+          \                      warnings.append(\"limited_candidates_repeat\")\n\
+          \                    fix_items.append({\n                        \"date\"\
+          : date,\n                        \"dayIndex\": i,\n                    \
+          \    \"meal\": target_meal,\n                        \"reason\": \"reduce_cost\"\
+          ,\n                        \"replace_recipeId\": replace_id,\n         \
+          \               \"candidate_ids\": candidates\n                    })\n\n\
+          \            # salt\n            if salt_max is not None and day_totals[\"\
+          salt\"] > salt_max:\n                target_meal = max(\n              \
+          \      [\"breakfast\", \"lunch\", \"dinner\"],\n                    key=lambda\
+          \ m: meal_totals[m][\"salt\"]\n                )\n                violations.append({\n\
+          \                    \"code\": \"salt_exceeded\",\n                    \"\
+          dayIndex\": i,\n                    \"date\": date,\n                  \
+          \  \"message\": f\"day salt {day_totals['salt']:.2f} > salt_max {salt_max:.2f}\"\
+          \n                })\n                current_rids = per_slot.get((i, target_meal),\
+          \ [])\n                replace_id = _pick_recipe_to_replace(current_rids,\
+          \ recipe_map, mode=\"salt\")\n                if isinstance(replace_id,\
+          \ str):\n                    same_cat = _safe_dict(recipe_map.get(replace_id)).get(\"\
+          category\")\n                    candidates = _rank_candidates(\n      \
+          \                  allowed_ids, recipe_map,\n                        mode=\"\
+          salt\",\n                        exclude_set=set(current_rids),\n      \
+          \                  same_category=same_cat,\n                        topk=3\n\
+          \                    )\n                    if len(candidates) < 3:\n  \
+          \                      warnings.append(\"limited_candidates_repeat\")\n\
+          \                    fix_items.append({\n                        \"date\"\
+          : date,\n                        \"dayIndex\": i,\n                    \
+          \    \"meal\": target_meal,\n                        \"reason\": \"reduce_salt\"\
+          ,\n                        \"replace_recipeId\": replace_id,\n         \
+          \               \"candidate_ids\": candidates\n                    })\n\n\
+          \            if min_usage is not None and budget > 0:\n                if\
+          \ day_totals[\"cost_per_person\"] < budget * (min_usage / 100.0):\n    \
+          \                warnings.append(\"min_budget_not_met\")\n\n        # repeat\n\
+          \        freq = {}\n        for rid in all_used:\n            if not isinstance(rid,\
+          \ str):\n                continue\n            freq[rid] = freq.get(rid,\
+          \ 0) + 1\n\n        overused = [rid for rid, c in freq.items() if c > max_repeat]\n\
+          \        for rid in overused:\n            violations.append({\n       \
+          \         \"code\": \"excessive_repeat\",\n                \"recipeId\"\
+          : rid,\n                \"message\": f\"{rid} repeated {freq.get(rid, 0)}\
+          \ times\"\n            })\n\n        if overused:\n            warnings.append(\"\
+          limited_candidates_repeat\")\n\n        # computed\n        total_cost_sum\
+          \ = round(sum(d[\"totals\"][\"cost_per_person\"] for d in totals_by_day),\
+          \ 2) if totals_by_day else 0.0\n        avg_cost = round(total_cost_sum\
+          \ / len(totals_by_day), 2) if totals_by_day else 0.0\n        used_recipe_ids\
+          \ = sorted(list(set([rid for rid in all_used if isinstance(rid, str)])))\n\
+          \n        computed = {\n            \"avg_cost_per_person_per_day\": avg_cost,\n\
+          \            \"total_cost_per_person_sum\": total_cost_sum,\n          \
+          \  \"totals_by_day\": totals_by_day,\n            \"used_recipe_ids\": used_recipe_ids,\n\
+          \        }\n\n        warnings = _uniq_preserve([w for w in warnings if\
+          \ isinstance(w, str)])\n        is_valid = (len(violations) == 0)\n\n  \
+          \      # ★ fix_hints は object にする（items配列を内包）\n        fix_hints_obj = {\n\
+          \            \"items\": fix_items,\n            \"meta\": {\n          \
+          \      \"max_repeat_per_recipe\": max_repeat,\n                \"allowed_recipe_ids_count\"\
+          : len(allowed_ids),\n            }\n        }\n\n        validation_obj\
+          \ = {\n            \"is_valid\": is_valid,\n            \"violations\":\
+          \ violations,\n            \"fix_hints\": fix_hints_obj,   # <- object\n\
+          \            \"computed\": computed,\n            \"warnings\": warnings,\n\
+          \            \"error\": \"\"\n        }\n        return _pack(validation_obj)\n\
+          \n    except Exception as e:\n        validation_obj = {\n            \"\
+          is_valid\": False,\n            \"violations\": [],\n            \"fix_hints\"\
+          : {\"items\": []},   # <- object\n            \"computed\": {},\n      \
+          \      \"warnings\": [],\n            \"error\": f\"validation_failed: {str(e)}\"\
+          \n        }\n        return _pack(validation_obj)\n"
+        code_language: python3
+        isInIteration: false
+        isInLoop: true
+        loop_id: '1768116634669'
+        outputs:
+          computed:
+            children: null
+            type: object
+          error:
+            children: null
+            type: string
+          fix_hints:
+            children: null
+            type: object
+          is_valid:
+            children: null
+            type: boolean
+          validation_obj:
+            children: null
+            type: object
+          violations:
+            children: null
+            type: array[object]
+          warnings:
+            children: null
+            type: array[string]
+        selected: false
+        title: 📝 CODE_修正後再検証
+        type: code
+        variables:
+        - value_selector:
+          - '1768116634669'
+          - current_json
+          value_type: object
+          variable: draft_json
+        - value_selector:
+          - '1768110503458'
+          - norm3
+          value_type: object
+          variable: norm3
+      height: 52
+      id: '1768119683472'
+      parentId: '1768116634669'
+      position:
+        x: 1748.5578340283805
+        y: 65
+      positionAbsolute:
+        x: 3942.3821574845656
+        y: 524.6699324446995
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+      zIndex: 1002
+    - data:
+        isInIteration: false
+        isInLoop: true
+        items:
+        - input_type: constant
+          operation: +=
+          value: 1
+          variable_selector:
+          - '1768116634669'
+          - attempt
+          write_mode: over-write
+        loop_id: '1768116634669'
+        selected: false
+        title: 📌 ASSIGN_リトライ回数更新
+        type: assigner
+        version: '2'
+      height: 84
+      id: '1768122258698'
+      parentId: '1768116634669'
+      position:
+        x: 158.5846235219119
+        y: 65
+      positionAbsolute:
+        x: 2352.408946978097
+        y: 524.6699324446995
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+      zIndex: 1002
+    - data:
+        isInIteration: false
+        isInLoop: true
+        items:
+        - input_type: variable
+          operation: over-write
+          value:
+          - '1768119352136'
+          - fixed_json
+          variable_selector:
+          - '1768116634669'
+          - current_json
+          write_mode: over-write
+        loop_id: '1768116634669'
+        selected: false
+        title: 📌 ASSIGN_現在JSON更新
+        type: assigner
+        version: '2'
+      height: 84
+      id: '1768122433358'
+      parentId: '1768116634669'
+      position:
+        x: 1423.0239301606443
+        y: 65
+      positionAbsolute:
+        x: 3616.8482536168294
+        y: 524.6699324446995
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+      zIndex: 1002
+    - data:
+        isInIteration: false
+        isInLoop: true
+        items:
+        - input_type: variable
+          operation: over-write
+          value:
+          - '1768119683472'
+          - is_valid
+          variable_selector:
+          - '1768116634669'
+          - is_valid
+          write_mode: over-write
+        - input_type: variable
+          operation: over-write
+          value:
+          - '1768119683472'
+          - validation_obj
+          variable_selector:
+          - '1768116634669'
+          - validation
+          write_mode: over-write
+        loop_id: '1768116634669'
+        selected: false
+        title: 📌 ASSIGN_検証結果更新
+        type: assigner
+        version: '2'
+      height: 110
+      id: '1768122498335'
+      parentId: '1768116634669'
+      position:
+        x: 2074.3361931509266
+        y: 65
+      positionAbsolute:
+        x: 4268.160516607111
+        y: 524.6699324446995
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+      zIndex: 1002
+    - data:
+        code: "from datetime import datetime, timedelta\n\ndef _dates(start_date:\
+          \ str, days: int):\n    d0 = datetime.strptime(start_date, \"%Y-%m-%d\"\
+          )\n    return [(d0 + timedelta(days=i)).strftime(\"%Y-%m-%d\") for i in\
+          \ range(days)]\n\ndef _as_list(x):\n    return x if isinstance(x, list)\
+          \ else []\n\ndef _uniq_preserve(xs):\n    seen = set()\n    out = []\n \
+          \   for x in xs:\n        if x in seen:\n            continue\n        seen.add(x)\n\
+          \        out.append(x)\n    return out\n\ndef _sum_day(recipe_ids, recipe_map):\n\
+          \    cost = cal = protein = salt = 0.0\n    for rid in recipe_ids:\n   \
+          \     r = recipe_map.get(rid)\n        if not isinstance(r, dict):\n   \
+          \         continue\n        cost += float(r.get(\"costPerServing\", 0) or\
+          \ 0)\n        cal += float(r.get(\"calories\", 0) or 0)\n        protein\
+          \ += float(r.get(\"protein\", 0) or 0)\n        salt += float(r.get(\"salt\"\
+          , 0) or 0)\n    return {\n        \"cost_per_person\": round(cost, 2),\n\
+          \        \"calories\": round(cal, 2),\n        \"protein\": round(protein,\
+          \ 2),\n        \"salt\": round(salt, 2),\n    }\n\ndef main(draft_json,\
+          \ norm3, warnings=None):\n    try:\n        if not isinstance(draft_json,\
+          \ dict):\n            return {\"final\": None, \"ok\": False, \"error\"\
+          : \"draft_json must be object\"}\n\n        recipe_map = norm3.get(\"recipe_map\"\
+          )\n        if not isinstance(recipe_map, dict):\n            return {\"\
+          final\": None, \"ok\": False, \"error\": \"norm3.recipe_map missing\"}\n\
+          \n        days = int(norm3.get(\"days\", 0) or 0)\n        start_date =\
+          \ norm3.get(\"start_date\")\n        if not start_date or days <= 0:\n \
+          \           return {\"final\": None, \"ok\": False, \"error\": \"norm3.days/start_date\
+          \ invalid\"}\n\n        expected_dates = _dates(start_date, days)\n    \
+          \    budget = float(norm3.get(\"budget_per_person_per_day\", 0) or 0)\n\
+          \        min_usage = float(norm3.get(\"min_budget_usage_percent\", 0) or\
+          \ 0)\n        salt_max = norm3.get(\"daily_salt_max\")\n        salt_max\
+          \ = float(salt_max) if salt_max is not None else None\n\n        plan =\
+          \ draft_json.get(\"plan\")\n        if not isinstance(plan, list):\n   \
+          \         return {\"final\": None, \"ok\": False, \"error\": \"draft_json.plan\
+          \ must be array\"}\n\n        # plan件数がズレてても落とす（trueルート前提なので厳しめ）\n     \
+          \   if len(plan) != days:\n            return {\"final\": None, \"ok\":\
+          \ False, \"error\": f\"plan length {len(plan)} != days {days}\"}\n\n   \
+          \     # date連続チェック（順不同なら並び替えたい場合はここでsortしてもOKだが、方針固定なので落とす）\n        for\
+          \ i, day in enumerate(plan):\n            if not isinstance(day, dict):\n\
+          \                return {\"final\": None, \"ok\": False, \"error\": f\"\
+          plan[{i}] must be object\"}\n            if day.get(\"date\") != expected_dates[i]:\n\
+          \                return {\"final\": None, \"ok\": False, \"error\": f\"\
+          date mismatch at index {i}: {day.get('date')} != {expected_dates[i]}\"}\n\
+          \n            meals = day.get(\"meals\")\n            if not isinstance(meals,\
+          \ dict):\n                return {\"final\": None, \"ok\": False, \"error\"\
+          : f\"plan[{i}].meals must be object\"}\n\n            # breakfast/lunch/dinner\
+          \ 必須\n            for meal_name in [\"breakfast\", \"lunch\", \"dinner\"\
+          ]:\n                m = meals.get(meal_name)\n                if not isinstance(m,\
+          \ dict):\n                    return {\"final\": None, \"ok\": False, \"\
+          error\": f\"plan[{i}].meals.{meal_name} must be object\"}\n            \
+          \    rids = m.get(\"recipe_ids\")\n                if not isinstance(rids,\
+          \ list):\n                    return {\"final\": None, \"ok\": False, \"\
+          error\": f\"plan[{i}].meals.{meal_name}.recipe_ids must be array\"}\n\n\
+          \                # id存在チェック（最終構造検証なので厳密に）\n                for rid in rids:\n\
+          \                    if rid not in recipe_map:\n                       \
+          \ return {\"final\": None, \"ok\": False, \"error\": f\"unknown recipe_id\
+          \ at dayIndex={i} meal={meal_name}: {rid}\"}\n\n        # totalsをrecipe_mapから再計算して上書き（LLM\
+          \ totalsは信用しない）\n        used_ids = []\n        totals_by_day = []\n   \
+          \     for i, day in enumerate(plan):\n            all_ids = []\n       \
+          \     for meal_name in [\"breakfast\", \"lunch\", \"dinner\"]:\n       \
+          \         all_ids.extend(day[\"meals\"][meal_name][\"recipe_ids\"])\n  \
+          \          used_ids.extend(all_ids)\n\n            totals = _sum_day(all_ids,\
+          \ recipe_map)\n            day[\"totals\"] = totals  # 上書き\n           \
+          \ totals_by_day.append({\"date\": day[\"date\"], \"totals\": totals})\n\n\
+          \        used_ids = _uniq_preserve(used_ids)\n\n        avg_cost = round(sum(d[\"\
+          totals\"][\"cost_per_person\"] for d in totals_by_day) / days, 2)\n\n  \
+          \      # summary.warnings：検証ノードのwarningsを引き継ぎつつ、念のためここでも軽く補足\n        w\
+          \ = _as_list(warnings)\n        # 安全側で追加（本来trueなら入らないはずだが、ズレたらここで出る）\n \
+          \       for d in totals_by_day:\n            if budget > 0 and d[\"totals\"\
+          ][\"cost_per_person\"] > budget:\n                w.append(\"budget_limit_exceeded\"\
+          )\n            if salt_max is not None and d[\"totals\"][\"salt\"] > salt_max:\n\
+          \                w.append(\"salt_max_exceeded\")\n            if min_usage\
+          \ > 0 and budget > 0:\n                if d[\"totals\"][\"cost_per_person\"\
+          ] < budget * (min_usage / 100.0):\n                    w.append(\"min_budget_not_met\"\
+          )\n\n        w = _uniq_preserve(w)\n\n        final = {\n            \"\
+          plan\": plan,\n            \"used_recipe_ids\": used_ids,\n            \"\
+          summary\": {\n                \"total_cost_per_person_per_day_avg\": avg_cost,\n\
+          \                \"warnings\": w\n            }\n        }\n\n        return\
+          \ {\"final\": final, \"ok\": True, \"error\": \"\"}\n\n    except Exception\
+          \ as e:\n        return {\"final\": None, \"ok\": False, \"error\": f\"\
+          final_validation_failed: {str(e)}\"}"
+        code_language: python3
+        outputs:
+          error:
+            children: null
+            type: string
+          final:
+            children: null
+            type: object
+          ok:
+            children: null
+            type: boolean
+        selected: false
+        title: 📝 CODE_ループ後最終検証
+        type: code
+        variables:
+        - value_selector:
+          - '1768116634669'
+          - current_json
+          value_type: object
+          variable: draft_json
+        - value_selector:
+          - '1768110503458'
+          - norm3
+          value_type: object
+          variable: norm3
+        - value_selector:
+          - '1767928040815'
+          - warnings
+          value_type: array[string]
+          variable: warnings
+      height: 52
+      id: '17681267016680'
+      position:
+        x: 4858.048977054681
+        y: 459.6699324446995
+      positionAbsolute:
+        x: 4858.048977054681
+        y: 459.6699324446995
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        outputs:
+        - value_selector:
+          - '17681267016680'
+          - final
+          value_type: object
+          variable: final
+        selected: false
+        title: 🏁 END_ループ後出力
+        type: end
+      height: 88
+      id: '1768127280828'
+      position:
+        x: 5233.7697861650395
+        y: 459.6699324446995
+      positionAbsolute:
+        x: 5233.7697861650395
+        y: 459.6699324446995
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    viewport:
+      x: 450.27578185590676
+      y: 154.91534867450545
+      zoom: 0.31600077461320214
+  rag_pipeline_variables: []

@@ -634,7 +634,7 @@ export function RecipesClient() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-sky-100 bg-white/90 p-5 shadow-[0_12px_32px_rgba(14,94,156,0.06)]">
+      <div className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-[0_12px_32px_rgba(0,0,0,0.06)]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
@@ -664,7 +664,7 @@ export function RecipesClient() {
               <button
                 type="button"
                 onClick={openManual}
-                className="flex items-center gap-2 rounded-full bg-sky-600 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-700"
+                className="flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800"
               >
                 <span className="text-base leading-none">＋</span>
                 <span>手入力</span>
@@ -684,7 +684,7 @@ export function RecipesClient() {
             <select
               value={selectedChefId ?? ""}
               onChange={(event) => setSelectedChefId(event.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-100"
             >
               {chefs.length === 0 ? <option value="">（司厨がいません）</option> : null}
               {chefs.map((chef) => (
@@ -702,11 +702,10 @@ export function RecipesClient() {
               key={scope}
               type="button"
               onClick={() => handleTabChange(scope)}
-              className={`rounded-full px-4 py-1 text-xs font-semibold transition ${
-                tab === scope
-                  ? "bg-sky-600 text-white shadow-sm"
-                  : "border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-800"
-              }`}
+              className={`rounded-full px-4 py-1 text-xs font-semibold transition ${tab === scope
+                ? "bg-slate-900 text-white shadow-sm"
+                : "border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-800"
+                }`}
             >
               {scopeLabels[scope]}
             </button>
@@ -719,7 +718,7 @@ export function RecipesClient() {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-100"
               placeholder="レシピ名で検索"
             />
           </label>
@@ -728,7 +727,7 @@ export function RecipesClient() {
             <select
               value={category}
               onChange={(event) => setCategory(event.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-100"
             >
               <option value="all">すべて</option>
               {categoryOptions
@@ -753,11 +752,10 @@ export function RecipesClient() {
                     key={item.value}
                     type="button"
                     onClick={() => setReferenceFilter(item.value)}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                      referenceFilter === item.value
-                        ? "bg-slate-900 text-white"
-                        : "border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-800"
-                    }`}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold transition ${referenceFilter === item.value
+                      ? "bg-slate-900 text-white"
+                      : "border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-800"
+                      }`}
                   >
                     {item.label}
                   </button>
@@ -776,7 +774,7 @@ export function RecipesClient() {
         {showImporter ? (
           <form
             onSubmit={handleImport}
-            className="mt-4 rounded-2xl border border-dashed border-sky-200 bg-sky-50/50 p-4"
+            className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4"
           >
             <div className="flex flex-wrap items-start gap-4">
               <div className="flex-1">
@@ -795,12 +793,12 @@ export function RecipesClient() {
                     const file = event.target.files?.[0] ?? null;
                     setCsvFile(file);
                   }}
-                  className="text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-sky-600 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-sky-700"
+                  className="text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-800"
                 />
                 <button
                   type="submit"
                   disabled={importing || !csvFile}
-                  className="rounded-xl border border-sky-200 bg-white px-4 py-2 text-xs font-semibold text-sky-700 shadow-sm transition hover:border-sky-300 hover:text-sky-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {importing ? "取り込み中..." : "CSV取り込み"}
                 </button>
@@ -837,7 +835,7 @@ export function RecipesClient() {
                 <input
                   value={pasteName}
                   onChange={(event) => setPasteName(event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-100"
                   placeholder="例: 港別メニュー案"
                 />
               </label>
@@ -846,7 +844,7 @@ export function RecipesClient() {
                 <textarea
                   value={pasteText}
                   onChange={(event) => setPasteText(event.target.value)}
-                  className="min-h-[140px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  className="min-h-[140px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-100"
                   placeholder="レシピや献立メモを貼り付けてください"
                 />
               </label>
@@ -855,7 +853,7 @@ export function RecipesClient() {
               <button
                 type="submit"
                 disabled={pasting || !pasteText.trim()}
-                className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300"
+                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 {pasting ? "作成中..." : "下書きを作成"}
               </button>
@@ -866,7 +864,7 @@ export function RecipesClient() {
         {showEditor ? (
           <form
             onSubmit={saveRecipe}
-            className="mt-4 rounded-2xl border border-sky-100 bg-white p-4 shadow-[0_10px_24px_rgba(14,94,156,0.08)]"
+            className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_24px_rgba(0,0,0,0.08)]"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -899,7 +897,7 @@ export function RecipesClient() {
                 <input
                   value={form.name}
                   onChange={(event) => setForm({ ...form, name: event.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-100"
                   placeholder="例: 鶏の照り焼き"
                 />
               </label>
@@ -911,7 +909,7 @@ export function RecipesClient() {
                 <select
                   value={form.category}
                   onChange={(event) => setForm({ ...form, category: event.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-100"
                 >
                   {categoryOptions.map((option) => (
                     <option key={option.value || "none"} value={option.value}>
@@ -930,7 +928,7 @@ export function RecipesClient() {
                   onChange={(event) => setForm({ ...form, calories: event.target.value })}
                   type="number"
                   min={0}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-100"
                   placeholder="例: 520"
                 />
               </label>
@@ -945,7 +943,7 @@ export function RecipesClient() {
                   type="number"
                   min={0}
                   step="0.1"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-100"
                   placeholder="例: 28"
                 />
               </label>
@@ -960,7 +958,7 @@ export function RecipesClient() {
                   type="number"
                   min={0}
                   step="0.1"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-100"
                   placeholder="例: 1.2"
                 />
               </label>
@@ -974,7 +972,7 @@ export function RecipesClient() {
                   onChange={(event) => setForm({ ...form, costPerServing: event.target.value })}
                   type="number"
                   min={0}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-100"
                   placeholder="例: 320"
                 />
               </label>
@@ -987,7 +985,7 @@ export function RecipesClient() {
                   <textarea
                     value={form.draftText}
                     onChange={(event) => setForm({ ...form, draftText: event.target.value })}
-                    className="min-h-[120px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                    className="min-h-[120px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-100"
                     placeholder="取り込み内容をメモしておくと整理が楽になります"
                   />
                 </label>
@@ -998,7 +996,7 @@ export function RecipesClient() {
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-sky-300"
+                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 {saving ? "保存中..." : editingId ? "更新する" : "下書きを保存"}
               </button>
@@ -1007,7 +1005,7 @@ export function RecipesClient() {
                   type="button"
                   onClick={publishDraftFromEditor}
                   disabled={saving}
-                  className="rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   公開する
                 </button>
@@ -1091,11 +1089,10 @@ export function RecipesClient() {
                             type="button"
                             onClick={() => handleReference(recipe)}
                             disabled={actionId === recipe.id}
-                            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                              (recipe.chefReferenceEnabled ?? false)
-                                ? "bg-emerald-600 text-white"
-                                : "border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-800"
-                            }`}
+                            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${(recipe.chefReferenceEnabled ?? false)
+                              ? "bg-slate-900 text-white"
+                              : "border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-800"
+                              }`}
                           >
                             {(recipe.chefReferenceEnabled ?? false) ? "ON" : "OFF"}
                           </button>
@@ -1106,7 +1103,7 @@ export function RecipesClient() {
                           <select
                             value={
                               recipe.overrideReferenceEnabled === null ||
-                              recipe.overrideReferenceEnabled === undefined
+                                recipe.overrideReferenceEnabled === undefined
                                 ? ""
                                 : recipe.overrideReferenceEnabled
                                   ? "on"
@@ -1153,7 +1150,7 @@ export function RecipesClient() {
                               }
                             }}
                             disabled={actionId === recipe.id}
-                            className="rounded-xl border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 shadow-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100 disabled:opacity-60"
+                            className="rounded-xl border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-100 disabled:opacity-60"
                           >
                             <option value="">未設定</option>
                             <option value="on">強制ON</option>
@@ -1201,7 +1198,7 @@ export function RecipesClient() {
                                 type="button"
                                 onClick={() => handlePublishDraft(recipe)}
                                 disabled={actionId === recipe.id}
-                                className="rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:text-emerald-800 disabled:opacity-60"
+                                className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:opacity-60"
                               >
                                 公開
                               </button>

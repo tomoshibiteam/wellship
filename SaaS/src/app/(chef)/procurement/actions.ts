@@ -1,6 +1,8 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { matchProductsForIngredients } from "@/lib/matching/product-matcher";
+import { getCurrentUser } from "@/lib/auth/session";
 import type {
   DefaultStartDate,
   ProcurementItem,
@@ -14,6 +16,9 @@ type IngredientRow = {
   unit: string;
   storageType: string;
   costPerUnit?: number | null;
+  // 商社プラットフォーム追加フィールド
+  price?: number | null;
+  isBonus?: boolean | null;
 };
 
 type LatestPlanRange =
@@ -29,10 +34,15 @@ type LatestPlanRange =
 // モデル追加なしの「B案」として MenuPlan の日付と updatedAt を利用する。
 // generateMenuPlan 時に古い日付を削除しているため、DB に存在する MenuPlan 群が「最新バッチ」とみなせる前提。
 async function getLatestPlanRange(): Promise<LatestPlanRange> {
+  const user = await getCurrentUser();
+  if (!user) return null;
+  const vesselId = user.vesselIds?.[0];
+  if (!vesselId) return null;
   const supabase = await createSupabaseServerClient();
   const { data: plans, error } = await supabase
     .from("MenuPlan")
     .select("date")
+    .eq("vesselId", vesselId)
     .order("updatedAt", { ascending: false });
   if (error || !plans) {
     console.error("Failed to load menu plans", {
@@ -69,6 +79,14 @@ function formatDateString(date: Date) {
 export async function generateProcurementList(
   input: ProcurementRequest,
 ): Promise<ProcurementResult> {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error("認証が必要です。");
+  }
+  const vesselId = user.vesselIds?.[0];
+  if (!vesselId) {
+    throw new Error("担当船舶が設定されていません。");
+  }
   if (!input.startDate || input.startDate.length < 8) {
     return {
       items: [],
@@ -103,8 +121,9 @@ export async function generateProcurementList(
   const { data: plans, error: plansError } = await supabase
     .from("MenuPlan")
     .select(
-      "date,crewCount,budgetPerPerson,recipeLinks:MenuPlanRecipe(recipe:Recipe(ingredients:RecipeIngredient(amount,ingredient:Ingredient(id,name,unit,storageType,costPerUnit))))",
+      "date,crewCount,budgetPerPerson,recipeLinks:MenuPlanRecipe(recipe:Recipe(ingredients:RecipeIngredient(amount,ingredient:Ingredient(id,name,unit,storageType,costPerUnit,price,isBonus))))",
     )
+    .eq("vesselId", vesselId)
     .gte("date", startStr)
     .lte("date", endStr);
   if (plansError) {
@@ -164,6 +183,7 @@ export async function generateProcurementList(
   const { data: adjustments, error: adjustmentError } = await supabase
     .from("ProcurementAdjustment")
     .select("*")
+    .eq("vesselId", vesselId)
     .eq("startDate", startStr)
     .eq("endDate", endStr);
   if (adjustmentError) {
@@ -179,6 +199,7 @@ export async function generateProcurementList(
     await supabase
       .from("ProcurementAdjustment")
       .delete()
+      .eq("vesselId", vesselId)
       .eq("startDate", startStr)
       .eq("endDate", endStr);
   } else {
@@ -186,6 +207,7 @@ export async function generateProcurementList(
     await supabase
       .from("ProcurementAdjustment")
       .delete()
+      .eq("vesselId", vesselId)
       .eq("startDate", startStr)
       .eq("endDate", endStr)
       .not("ingredientId", "in", notInFilter);
@@ -201,6 +223,7 @@ export async function generateProcurementList(
     orderAmount: number;
     inStock: boolean;
     unitPrice: number;
+    vesselId: string;
   }> = [];
   for (const { ingredient, plannedAmount } of map.values()) {
     const existing = adjustmentMap.get(ingredient.id);
@@ -221,6 +244,7 @@ export async function generateProcurementList(
       orderAmount,
       inStock,
       unitPrice: unitCost,
+      vesselId,
     });
   }
 
@@ -237,6 +261,7 @@ export async function generateProcurementList(
   const { data: latestAdjustments, error: latestError } = await supabase
     .from("ProcurementAdjustment")
     .select("*")
+    .eq("vesselId", vesselId)
     .eq("startDate", startStr)
     .eq("endDate", endStr);
   if (latestError) {
@@ -246,10 +271,35 @@ export async function generateProcurementList(
   const latestMap = new Map<string, typeof latestAdjustments[number]>();
   latestAdjustments?.forEach((adj) => latestMap.set(adj.ingredientId, adj));
 
+
+
   const items: ProcurementItem[] = [];
+
+  // マッチング実行 (ingredientsのIDリストを渡す)
+  // 今回デモ用に佐世保港固定、本来は Vessel の現在地や設定から取得
+  const ingredientIds = Array.from(map.keys());
+  const matchedMap = await matchProductsForIngredients(ingredientIds, "佐世保港");
+
   for (const { ingredient } of map.values()) {
     const adj = latestMap.get(ingredient.id)!;
-    const subtotal = adj.inStock || adj.orderAmount <= 0 ? 0 : adj.orderAmount * adj.unitPrice;
+    const match = matchedMap.get(ingredient.id);
+
+    // 単価の決定:
+    // 1. マッチングされた商品の価格
+    // 2. 過去の調整価格 (adj.unitPrice)
+    // 3. 食材マスタの標準価格 (ingredient.price or costPerUnit)
+    // ※今回はマッチングがあればそれを優先採用して単価を上書きする挙動にする
+
+    let appliedUnitPrice = adj.unitPrice;
+    if (match) {
+      // マッチングがあれば単価を商品のものにする（デモ仕様）
+      // 実際にはユーザーが選択・調整するまで勝手に変えない方が良い場合もあるが
+      // "AI提案"として初期値を最適化するならここで入れる
+      appliedUnitPrice = match.price;
+    }
+
+    const subtotal = adj.inStock || adj.orderAmount <= 0 ? 0 : adj.orderAmount * appliedUnitPrice;
+
     items.push({
       ingredientId: ingredient.id,
       name: ingredient.name,
@@ -258,8 +308,18 @@ export async function generateProcurementList(
       plannedAmount: adj.plannedAmount,
       orderAmount: adj.orderAmount,
       inStock: adj.inStock,
-      unitCost: adj.unitPrice,
+      unitCost: appliedUnitPrice,
       subtotal,
+      // 商社プラットフォーム追加フィールド
+      isBonus: ingredient.isBonus ?? false,
+      price: ingredient.price ?? Math.round(appliedUnitPrice),
+      matchedProduct: match ? {
+        id: match.productId,
+        name: match.productName,
+        supplierName: match.supplierName,
+        price: match.price,
+        unit: match.unit
+      } : null
     });
   }
 

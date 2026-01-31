@@ -1,24 +1,25 @@
 import type {
   AlertItem,
   AlertStatus,
+  CrewMember,
   FeedbackReasonStat,
   FeedbackTrendPoint,
   ManagerRange,
   ManagerScope,
+  ManagerUser,
   RecipeStat,
   Vessel,
   VesselDetail,
 } from './types';
-import {
-  mockAlerts,
-  mockCrew,
-  mockFeedbackReasons,
-  mockRecipeStats,
-  mockTrend,
-  mockUsers,
-  mockVesselDetails,
-  mockVessels,
-} from './mock-data';
+
+const emptyVessels: Vessel[] = [];
+const emptyAlerts: AlertItem[] = [];
+const emptyTrend: FeedbackTrendPoint[] = [];
+const emptyReasons: FeedbackReasonStat[] = [];
+const emptyRecipes: RecipeStat[] = [];
+const emptyUsers: ManagerUser[] = [];
+const emptyCrew: CrewMember[] = [];
+const emptyVesselDetails: Record<string, VesselDetail> = {};
 
 const rangeFactor: Record<ManagerRange, number> = {
   '7d': 1,
@@ -79,13 +80,13 @@ const applyRangeToTrend = (trend: FeedbackTrendPoint[], range: ManagerRange) =>
   }));
 
 export function getManagerVessels(scope: ManagerScope, range: ManagerRange): Vessel[] {
-  const scoped = filterByScope(scope, mockVessels);
+  const scoped = filterByScope(scope, emptyVessels);
   return scoped.map((vessel) => applyRangeToMetrics(vessel, range));
 }
 
 export function getDashboardSummary(scope: ManagerScope, range: ManagerRange) {
   const vessels = getManagerVessels(scope, range);
-  const alerts = filterAlertsByScope(scope, mockAlerts)
+  const alerts = filterAlertsByScope(scope, emptyAlerts)
     .filter((alert) => alert.status === 'open')
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
@@ -117,22 +118,22 @@ export function getDashboardSummary(scope: ManagerScope, range: ManagerRange) {
       {
         label: '回答率',
         value: `${Math.round(responseRate * 100)}%`,
-        trend: '前週比 +2pt',
+        trend: '—',
       },
       {
         label: '👍率',
         value: `${Math.round(positiveRate * 100)}%`,
-        trend: '前週比 +1pt',
+        trend: '—',
       },
       {
         label: '👎率',
         value: `${Math.round(negativeRate * 100)}%`,
-        trend: '前週比 -1pt',
+        trend: '—',
       },
       {
         label: '当日変更率',
         value: `${Math.round(changeRate * 100)}%`,
-        trend: '前週比 +0.5pt',
+        trend: '—',
       },
     ],
     vessels,
@@ -142,7 +143,7 @@ export function getDashboardSummary(scope: ManagerScope, range: ManagerRange) {
 }
 
 export function getVesselDetail(vesselId: string, range: ManagerRange): VesselDetail | null {
-  const detail = mockVesselDetails[vesselId];
+  const detail = emptyVesselDetails[vesselId];
   if (!detail) return null;
   return {
     ...detail,
@@ -153,13 +154,13 @@ export function getVesselDetail(vesselId: string, range: ManagerRange): VesselDe
 }
 
 export function getFeedbackSummary(scope: ManagerScope, range: ManagerRange) {
-  const reasons = applyRangeToReasons(mockFeedbackReasons, range);
-  const recipes = applyRangeToRecipes(mockRecipeStats, range);
+  const reasons = applyRangeToReasons(emptyReasons, range);
+  const recipes = applyRangeToRecipes(emptyRecipes, range);
   return {
-    trend: applyRangeToTrend(mockTrend, range),
+    trend: applyRangeToTrend(emptyTrend, range),
     reasons,
     recipes,
-    vesselCount: filterByScope(scope, mockVessels).length,
+    vesselCount: filterByScope(scope, emptyVessels).length,
   };
 }
 
@@ -168,7 +169,7 @@ export function getAlerts(
   range: ManagerRange,
   status: AlertStatus
 ): AlertItem[] {
-  const scoped = filterAlertsByScope(scope, mockAlerts);
+  const scoped = filterAlertsByScope(scope, emptyAlerts);
   return scoped
     .filter((alert) => alert.status === status)
     .map((alert) => ({
@@ -186,9 +187,9 @@ export function getAlertCount(scope: ManagerScope, range: ManagerRange): number 
 }
 
 export function getCrewMembers(vesselId: string) {
-  return mockCrew.filter((member) => member.vesselId === vesselId);
+  return emptyCrew.filter((member) => member.vesselId === vesselId);
 }
 
 export function getManagerUsers() {
-  return mockUsers;
+  return emptyUsers;
 }

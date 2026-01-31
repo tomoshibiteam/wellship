@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { RecipeCategory } from '@prisma/client';
+import { safeJsonRequest } from '@/lib/offline/retry-queue';
+import { loadDraft, saveDraft, clearDraft } from '@/lib/offline/draft-storage';
 
 type MealType = 'breakfast' | 'lunch' | 'dinner';
 type ViewMode = 'calendar' | 'day' | 'day-summary';
@@ -97,10 +99,16 @@ export function DailyMenuClient({
     vesselName,
     recipes: allRecipes,
 }: DailyMenuClientProps) {
-    const [viewMode, setViewMode] = useState<ViewMode>('calendar');
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+    const viewStateKey = `wellship_daily_menu_state:${vesselId}`;
+    const initialState = loadDraft(viewStateKey, {
+        viewMode: 'calendar' as ViewMode,
+        selectedDate: new Date().toISOString().slice(0, 10),
+        mealType: guessMealType(),
+    });
+    const [viewMode, setViewMode] = useState<ViewMode>(initialState.viewMode);
+    const [selectedDate, setSelectedDate] = useState(initialState.selectedDate);
     const [calendarMonth, setCalendarMonth] = useState(new Date());
-    const [mealType, setMealType] = useState<MealType>(guessMealType());
+    const [mealType, setMealType] = useState<MealType>(initialState.mealType);
     const [menuPlan, setMenuPlan] = useState<MenuPlan | null>(null);
     const [calendarData, setCalendarData] = useState<Record<string, boolean>>({});
     const [calendarSummary, setCalendarSummary] = useState<Record<string, {
@@ -119,6 +127,9 @@ export function DailyMenuClient({
     const fileInputRef = useRef<HTMLInputElement>(null);
     // 1日サマリー用ステート
     const [daySummary, setDaySummary] = useState<DaySummary | null>(null);
+    const [hasLocalDraft, setHasLocalDraft] = useState(false);
+
+    const menuDraftKey = `${viewStateKey}:${selectedDate}:${mealType}`;
 
 
     // カレンダーデータ取得
@@ -154,7 +165,23 @@ export function DailyMenuClient({
             const res = await fetch(`/api/daily-menu?vesselId=${vesselId}&date=${selectedDate}&mealType=${mealType}`);
             const data = await res.json();
             if (res.ok) {
-                setMenuPlan(data.menuPlan);
+                const draft = loadDraft<{ recipeIds: string[] } | null>(menuDraftKey, null);
+                if (draft?.recipeIds?.length) {
+                    const draftRecipes = draft.recipeIds
+                        .map((id) => allRecipes.find((r) => r.id === id))
+                        .filter(Boolean) as Recipe[];
+                    setMenuPlan({
+                        id: data.menuPlan?.id ?? `draft-${selectedDate}-${mealType}`,
+                        date: selectedDate,
+                        mealType,
+                        healthScore: data.menuPlan?.healthScore ?? 0,
+                        recipes: draftRecipes,
+                    });
+                    setHasLocalDraft(true);
+                } else {
+                    setMenuPlan(data.menuPlan);
+                    setHasLocalDraft(false);
+                }
             } else {
                 setError(data.error);
             }
@@ -163,7 +190,7 @@ export function DailyMenuClient({
         } finally {
             setIsLoading(false);
         }
-    }, [vesselId, selectedDate, mealType]);
+    }, [vesselId, selectedDate, mealType, menuDraftKey, allRecipes]);
 
     // 1日サマリー取得
     const fetchDaySummary = useCallback(async () => {
@@ -192,6 +219,10 @@ export function DailyMenuClient({
         }
     }, [viewMode, fetchMenuPlan, fetchDaySummary]);
 
+    useEffect(() => {
+        saveDraft(viewStateKey, { viewMode, selectedDate, mealType });
+    }, [viewMode, selectedDate, mealType, viewStateKey]);
+
     // 日付クリック → 1日サマリービューを表示
     const handleDayClick = (date: string) => {
         setSelectedDate(date);
@@ -205,81 +236,166 @@ export function DailyMenuClient({
     };
 
 
+    const updateLocalDraft = (recipeIds: string[]) => {
+        saveDraft(menuDraftKey, { recipeIds });
+        setHasLocalDraft(true);
+    };
+
+    const clearLocalDraft = () => {
+        clearDraft(menuDraftKey);
+        setHasLocalDraft(false);
+    };
+
+    const buildRecipeList = (recipeIds: string[]) =>
+        recipeIds
+            .map((id) => allRecipes.find((recipe) => recipe.id === id))
+            .filter(Boolean) as Recipe[];
+
     // レシピ追加
     const handleAddRecipe = async (recipeId: string) => {
         if (!menuPlan) {
-            await fetch('/api/daily-menu', {
+            const response = await safeJsonRequest({
+                url: '/api/daily-menu',
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+                body: {
                     vesselId,
                     date: selectedDate,
                     mealType,
                     recipeIds: [recipeId],
-                }),
+                },
+                feature: 'daily-menu',
             });
+            if (response.queued) {
+                const nextIds = [recipeId];
+                setMenuPlan({
+                    id: `draft-${selectedDate}-${mealType}`,
+                    date: selectedDate,
+                    mealType,
+                    healthScore: 0,
+                    recipes: buildRecipeList(nextIds),
+                });
+                updateLocalDraft(nextIds);
+                setSuccessMessage('通信が不安定です。保存を保留しました。');
+                setShowRecipeModal(false);
+                setReplaceTarget(null);
+                return;
+            }
+            if (!response.ok) {
+                setError('献立の保存に失敗しました');
+                return;
+            }
         } else {
-            await fetch('/api/daily-menu', {
+            const response = await safeJsonRequest({
+                url: '/api/daily-menu',
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+                body: {
                     menuPlanId: menuPlan.id,
                     action: 'add',
                     recipeId,
-                }),
+                },
+                feature: 'daily-menu',
             });
+            if (response.queued) {
+                const nextIds = [...menuPlan.recipes.map((r) => r.id), recipeId];
+                setMenuPlan({ ...menuPlan, recipes: buildRecipeList(nextIds) });
+                updateLocalDraft(nextIds);
+                setSuccessMessage('通信が不安定です。保存を保留しました。');
+                setShowRecipeModal(false);
+                setReplaceTarget(null);
+                return;
+            }
+            if (!response.ok) {
+                setError('献立の保存に失敗しました');
+                return;
+            }
         }
         setShowRecipeModal(false);
         setReplaceTarget(null);
         fetchMenuPlan();
+        clearLocalDraft();
     };
 
     // レシピ入替
     const handleReplaceRecipe = async (newRecipeId: string) => {
         if (!menuPlan || !replaceTarget) return;
-        await fetch('/api/daily-menu', {
+        const response = await safeJsonRequest({
+            url: '/api/daily-menu',
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+            body: {
                 menuPlanId: menuPlan.id,
                 action: 'replace',
                 recipeId: replaceTarget,
                 newRecipeId,
-            }),
+            },
+            feature: 'daily-menu',
         });
+        if (response.queued) {
+            const nextIds = menuPlan.recipes.map((recipe) =>
+                recipe.id === replaceTarget ? newRecipeId : recipe.id,
+            );
+            setMenuPlan({ ...menuPlan, recipes: buildRecipeList(nextIds) });
+            updateLocalDraft(nextIds);
+            setSuccessMessage('通信が不安定です。保存を保留しました。');
+            setShowRecipeModal(false);
+            setReplaceTarget(null);
+            return;
+        }
+        if (!response.ok) {
+            setError('献立の保存に失敗しました');
+            return;
+        }
         setShowRecipeModal(false);
         setReplaceTarget(null);
         fetchMenuPlan();
+        clearLocalDraft();
     };
 
     // レシピ削除
     const handleRemoveRecipe = async (recipeId: string) => {
         if (!menuPlan) return;
-        await fetch('/api/daily-menu', {
+        const response = await safeJsonRequest({
+            url: '/api/daily-menu',
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+            body: {
                 menuPlanId: menuPlan.id,
                 action: 'remove',
                 recipeId,
-            }),
+            },
+            feature: 'daily-menu',
         });
+        if (response.queued) {
+            const nextIds = menuPlan.recipes.map((r) => r.id).filter((id) => id !== recipeId);
+            setMenuPlan({ ...menuPlan, recipes: buildRecipeList(nextIds) });
+            updateLocalDraft(nextIds);
+            setSuccessMessage('通信が不安定です。保存を保留しました。');
+            return;
+        }
+        if (!response.ok) {
+            setError('献立の保存に失敗しました');
+            return;
+        }
         fetchMenuPlan();
+        clearLocalDraft();
     };
 
     // 前日から複製
     const handleCopyFromYesterday = async () => {
-        const res = await fetch('/api/daily-menu/copy', {
+        const result = await safeJsonRequest({
+            url: '/api/daily-menu/copy',
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+            body: {
                 vesselId,
                 targetDate: selectedDate,
                 mealType,
-            }),
+            },
+            feature: 'daily-menu',
         });
-        const data = await res.json();
-        if (!res.ok) {
+        if (result.queued) {
+            setSuccessMessage('通信が不安定です。複製を保留しました。');
+            return;
+        }
+        const data = await result.response?.json().catch(() => ({}));
+        if (!result.ok) {
             setError(data.error);
         } else {
             setSuccessMessage('前日の献立を複製しました');
@@ -293,22 +409,27 @@ export function DailyMenuClient({
         setIsImporting(true);
         setShowImportModal(false);
         try {
-            const res = await fetch('/api/daily-menu/import-from-planning', {
+            const result = await safeJsonRequest({
+                url: '/api/daily-menu/import-from-planning',
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+                body: {
                     vesselId,
                     targetDate: selectedDate,
                     mealType,
-                }),
+                },
+                feature: 'daily-menu',
             });
-            const data = await res.json();
-            if (!res.ok) {
-                setError(data.error || 'AI献立の取り込みに失敗しました');
+            if (result.queued) {
+                setSuccessMessage('通信が不安定です。取り込みを保留しました。');
             } else {
-                setSuccessMessage(`${data.count}品をAI献立から取り込みました`);
-                fetchMenuPlan();
-                setTimeout(() => setSuccessMessage(null), 3000);
+                const data = await result.response?.json().catch(() => ({}));
+                if (!result.ok) {
+                    setError(data.error || 'AI献立の取り込みに失敗しました');
+                } else {
+                    setSuccessMessage(`${data.count}品をAI献立から取り込みました`);
+                    fetchMenuPlan();
+                    setTimeout(() => setSuccessMessage(null), 3000);
+                }
             }
         } catch {
             setError('AI献立の取り込みに失敗しました');
@@ -364,22 +485,27 @@ export function DailyMenuClient({
         setIsImporting(true);
         setShowImportModal(false);
         try {
-            const res = await fetch('/api/daily-menu/copy-from-week', {
+            const result = await safeJsonRequest({
+                url: '/api/daily-menu/copy-from-week',
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+                body: {
                     vesselId,
                     targetDate: selectedDate,
                     mealType,
-                }),
+                },
+                feature: 'daily-menu',
             });
-            const data = await res.json();
-            if (!res.ok) {
-                setError(data.error || '先週の献立の複製に失敗しました');
+            if (result.queued) {
+                setSuccessMessage('通信が不安定です。複製を保留しました。');
             } else {
-                setSuccessMessage('先週の同曜日から複製しました');
-                fetchMenuPlan();
-                setTimeout(() => setSuccessMessage(null), 3000);
+                const data = await result.response?.json().catch(() => ({}));
+                if (!result.ok) {
+                    setError(data.error || '先週の献立の複製に失敗しました');
+                } else {
+                    setSuccessMessage('先週の同曜日から複製しました');
+                    fetchMenuPlan();
+                    setTimeout(() => setSuccessMessage(null), 3000);
+                }
             }
         } catch {
             setError('先週の献立の複製に失敗しました');
@@ -425,10 +551,15 @@ export function DailyMenuClient({
         return (
             <div className="space-y-6">
                 {/* ヘッダー */}
-                <div className="flex items-center justify-between rounded-2xl border border-sky-100 bg-white/90 px-6 py-4 shadow-[0_8px_24px_rgba(14,94,156,0.06)]">
+                <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white/90 px-6 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
                     <div className="flex items-center gap-3">
                         <span className="text-2xl">🚢</span>
                         <span className="font-semibold text-slate-800">{vesselName}</span>
+                        {hasLocalDraft && (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                                未送信あり
+                            </span>
+                        )}
                     </div>
                     <div className="flex items-center gap-3">
                         <button
@@ -457,13 +588,13 @@ export function DailyMenuClient({
                             setSelectedDate(today);
                             setViewMode('day');
                         }}
-                        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-sky-50 hover:border-sky-300"
+                        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300"
                     >
                         ✏️ 手動入力
                     </button>
                     <button
                         onClick={() => window.location.href = '/planning'}
-                        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:border-teal-300"
+                        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300"
                     >
                         🤖 AI生成
                     </button>
@@ -490,14 +621,14 @@ export function DailyMenuClient({
                             }
                         }}
                         disabled={isImporting}
-                        className="rounded-lg border-2 border-teal-400 bg-teal-50 px-3 py-1.5 text-xs font-bold text-teal-700 hover:bg-teal-100 disabled:opacity-50"
+                        className="rounded-lg border-2 border-slate-900 bg-slate-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-50"
                     >
                         {isImporting ? '取込中...' : '📋 AI献立を一括追加'}
                     </button>
                     <button
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isImporting}
-                        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-purple-50 hover:border-purple-300 disabled:opacity-50"
+                        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50"
                     >
                         {isImporting ? '取込中...' : '📄 CSV取込'}
                     </button>
@@ -524,7 +655,7 @@ export function DailyMenuClient({
                 )}
 
                 {/* カレンダー */}
-                <div className="rounded-2xl border border-sky-100 bg-white/90 p-6 shadow-[0_8px_24px_rgba(14,94,156,0.06)]">
+                <div className="rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
                     <div className="mb-4 flex items-center justify-between">
                         <h3 className="text-sm font-semibold text-slate-700">📅 日付をクリックして詳細を編集</h3>
                     </div>
@@ -552,10 +683,10 @@ export function DailyMenuClient({
                                     key={idx}
                                     onClick={() => handleDayClick(dateStr)}
                                     className={`min-h-[100px] rounded-xl border-2 p-2 text-left transition hover:shadow-md ${isToday
-                                        ? 'border-sky-500 bg-sky-50'
+                                        ? 'border-slate-900 bg-slate-50'
                                         : hasMenu
-                                            ? 'border-teal-300 bg-teal-50'
-                                            : 'border-slate-200 bg-white hover:border-sky-300'
+                                            ? 'border-slate-300 bg-slate-50'
+                                            : 'border-slate-200 bg-white hover:border-slate-300'
                                         }`}
                                 >
                                     <div className="flex items-center justify-between">
@@ -563,7 +694,7 @@ export function DailyMenuClient({
                                             }`}>
                                             {day}
                                         </span>
-                                        {isToday && <span className="rounded bg-sky-500 px-1 text-[10px] text-white">今日</span>}
+                                        {isToday && <span className="rounded bg-slate-900 px-1 text-[10px] text-white">今日</span>}
                                     </div>
                                     {summary && (
                                         <div className="mt-1 space-y-0.5 text-[10px]">
@@ -597,11 +728,11 @@ export function DailyMenuClient({
 
                     <div className="mt-4 flex items-center gap-4 text-xs text-slate-500">
                         <span className="flex items-center gap-1">
-                            <span className="inline-block h-3 w-3 rounded border-2 border-teal-300 bg-teal-50" />
+                            <span className="inline-block h-3 w-3 rounded border-2 border-slate-300 bg-slate-50" />
                             献立あり
                         </span>
                         <span className="flex items-center gap-1">
-                            <span className="inline-block h-3 w-3 rounded border-2 border-sky-500 bg-sky-50" />
+                            <span className="inline-block h-3 w-3 rounded border-2 border-slate-900 bg-slate-50" />
                             今日
                         </span>
                     </div>
@@ -618,7 +749,7 @@ export function DailyMenuClient({
         return (
             <div className="space-y-6">
                 {/* ヘッダー */}
-                <div className="flex items-center justify-between rounded-2xl border border-sky-100 bg-white/90 px-6 py-4 shadow-[0_8px_24px_rgba(14,94,156,0.06)]">
+                <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white/90 px-6 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
                     <button
                         onClick={() => setViewMode('calendar')}
                         className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium hover:bg-slate-50"
@@ -628,6 +759,11 @@ export function DailyMenuClient({
                     <div className="flex items-center gap-3">
                         <span className="text-2xl">🚢</span>
                         <span className="font-semibold text-slate-800">{vesselName}</span>
+                        {hasLocalDraft && (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                                未送信あり
+                            </span>
+                        )}
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="px-4 text-lg font-bold text-slate-900">
@@ -635,7 +771,7 @@ export function DailyMenuClient({
                         </div>
                         <button
                             onClick={() => setViewMode('day')}
-                            className="rounded-lg border border-sky-300 bg-sky-50 px-3 py-1.5 text-sm font-medium text-sky-700 hover:bg-sky-100"
+                            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
                         >
                             ✏️ 編集モード
                         </button>
@@ -660,7 +796,7 @@ export function DailyMenuClient({
                 ) : daySummary ? (
                     <>
                         {/* 1日の総合情報 */}
-                        <div className="rounded-2xl border-2 border-teal-200 bg-gradient-to-r from-teal-50 to-white p-5">
+                        <div className="rounded-2xl border-2 border-slate-200 bg-slate-50 p-5">
                             <h3 className="mb-3 text-lg font-bold text-slate-800">📊 1日の栄養・コスト</h3>
                             <div className="grid grid-cols-4 gap-4 text-center">
                                 <div className="rounded-xl bg-white p-3 shadow-sm">
@@ -668,7 +804,7 @@ export function DailyMenuClient({
                                     <div className="text-xs text-slate-500">カロリー(kcal)</div>
                                 </div>
                                 <div className="rounded-xl bg-white p-3 shadow-sm">
-                                    <div className="text-2xl font-bold text-sky-600">{daySummary.dailyTotals.protein.toFixed(1)}</div>
+                                    <div className="text-2xl font-bold text-slate-900">{daySummary.dailyTotals.protein.toFixed(1)}</div>
                                     <div className="text-xs text-slate-500">タンパク質(g)</div>
                                 </div>
                                 <div className="rounded-xl bg-white p-3 shadow-sm">
@@ -685,7 +821,7 @@ export function DailyMenuClient({
                         {/* 朝昼晩の献立 */}
                         <div className="grid gap-4 md:grid-cols-3">
                             {daySummary.meals.map(meal => (
-                                <div key={meal.mealType} className="rounded-2xl border border-sky-100 bg-white/90 p-5 shadow-[0_4px_12px_rgba(14,94,156,0.04)]">
+                                <div key={meal.mealType} className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">
                                     <div className="mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
                                         <span className="text-2xl">{mealTypeLabels[meal.mealType].icon}</span>
                                         <h4 className="text-lg font-bold text-slate-800">{meal.label}</h4>
@@ -749,7 +885,7 @@ export function DailyMenuClient({
     return (
         <div className="space-y-6">
             {/* ヘッダー */}
-            <div className="flex items-center justify-between rounded-2xl border border-sky-100 bg-white/90 px-6 py-4 shadow-[0_8px_24px_rgba(14,94,156,0.06)]">
+            <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white/90 px-6 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
                 <button
                     onClick={() => setViewMode('calendar')}
                     className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium hover:bg-slate-50"
@@ -759,6 +895,11 @@ export function DailyMenuClient({
                 <div className="flex items-center gap-3">
                     <span className="text-2xl">🚢</span>
                     <span className="font-semibold text-slate-800">{vesselName}</span>
+                    {hasLocalDraft && (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                            未送信あり
+                        </span>
+                    )}
                 </div>
                 <div className="px-4 text-lg font-bold text-slate-900">
                     📅 {dateDisplay}
@@ -772,8 +913,8 @@ export function DailyMenuClient({
                         key={mt}
                         onClick={() => setMealType(mt)}
                         className={`flex-1 rounded-xl border-2 px-4 py-3 text-center font-medium transition ${mealType === mt
-                            ? 'border-sky-500 bg-sky-50 text-sky-700'
-                            : 'border-slate-200 bg-white text-slate-600 hover:border-sky-200'
+                            ? 'border-slate-900 bg-slate-900 text-white'
+                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                             }`}
                     >
                         <span className="mr-2 text-lg">{mealTypeLabels[mt].icon}</span>
@@ -796,7 +937,7 @@ export function DailyMenuClient({
             )}
 
             {/* 献立カード */}
-            <div className="rounded-2xl border border-sky-100 bg-white/90 p-6 shadow-[0_8px_24px_rgba(14,94,156,0.06)]">
+            <div className="rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
                 <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-900">
                     <span>{mealTypeLabels[mealType].icon}</span>
                     {mealTypeLabels[mealType].label}の献立
@@ -830,7 +971,7 @@ export function DailyMenuClient({
                                             setReplaceTarget(recipe.id);
                                             setShowRecipeModal(true);
                                         }}
-                                        className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-sm font-medium text-sky-700 hover:bg-sky-100"
+                                        className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
                                     >
                                         入替
                                     </button>
@@ -857,13 +998,13 @@ export function DailyMenuClient({
                             setReplaceTarget(null);
                             setShowRecipeModal(true);
                         }}
-                        className="rounded-xl border-2 border-dashed border-sky-300 py-3 text-sm font-medium text-sky-700 hover:bg-sky-50"
+                        className="rounded-xl border-2 border-dashed border-slate-300 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
                     >
                         ＋ 1品追加
                     </button>
                     <button
                         onClick={() => setShowImportModal(true)}
-                        className="rounded-xl border border-teal-200 bg-teal-50 py-3 text-sm font-medium text-teal-700 hover:bg-teal-100"
+                        className="rounded-xl border border-slate-200 bg-slate-50 py-3 text-sm font-medium text-slate-700 hover:bg-slate-100"
                     >
                         📥 インポート
                     </button>
@@ -892,7 +1033,7 @@ export function DailyMenuClient({
                         <div className="space-y-3 p-6">
                             <button
                                 onClick={handleImportFromAI}
-                                className="flex w-full items-center gap-4 rounded-xl border border-slate-200 p-4 text-left hover:bg-teal-50"
+                                className="flex w-full items-center gap-4 rounded-xl border border-slate-200 p-4 text-left hover:bg-slate-50"
                             >
                                 <span className="text-2xl">🤖</span>
                                 <div>
@@ -905,7 +1046,7 @@ export function DailyMenuClient({
                                     setShowImportModal(false);
                                     fileInputRef.current?.click();
                                 }}
-                                className="flex w-full items-center gap-4 rounded-xl border border-slate-200 p-4 text-left hover:bg-purple-50"
+                                className="flex w-full items-center gap-4 rounded-xl border border-slate-200 p-4 text-left hover:bg-slate-50"
                             >
                                 <span className="text-2xl">📄</span>
                                 <div>
@@ -915,7 +1056,7 @@ export function DailyMenuClient({
                             </button>
                             <button
                                 onClick={handleCopyFromLastWeek}
-                                className="flex w-full items-center gap-4 rounded-xl border border-slate-200 p-4 text-left hover:bg-orange-50"
+                                className="flex w-full items-center gap-4 rounded-xl border border-slate-200 p-4 text-left hover:bg-slate-50"
                             >
                                 <span className="text-2xl">📆</span>
                                 <div>
@@ -959,7 +1100,7 @@ export function DailyMenuClient({
                                     <button
                                         key={recipe.id}
                                         onClick={() => replaceTarget ? handleReplaceRecipe(recipe.id) : handleAddRecipe(recipe.id)}
-                                        className="flex w-full items-center gap-3 rounded-lg border border-slate-200 p-3 text-left hover:bg-sky-50"
+                                        className="flex w-full items-center gap-3 rounded-lg border border-slate-200 p-3 text-left hover:bg-slate-50"
                                     >
                                         <span className="text-xl">{categoryLabels[recipe.category]?.icon || '🍽️'}</span>
                                         <div className="flex-1">

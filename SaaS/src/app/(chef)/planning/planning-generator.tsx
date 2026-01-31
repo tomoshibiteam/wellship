@@ -264,7 +264,7 @@ export default function PlanningGenerator({
       <div className="space-y-4" data-testid="planning-generator">
         <form
           onSubmit={handleGenerate}
-          className="rounded-2xl border border-sky-100 bg-white/90 p-5 shadow-[0_12px_32px_rgba(14,94,156,0.06)]"
+          className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-[0_12px_32px_rgba(0,0,0,0.06)]"
         >
           <div className="flex items-center justify-between">
             <div>
@@ -273,7 +273,7 @@ export default function PlanningGenerator({
               </p>
               <h2 className="text-lg font-semibold text-slate-900">条件入力フォーム</h2>
             </div>
-            <span className="rounded-full bg-sky-50 px-3 py-1 text-[11px] font-semibold text-sky-700">
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-700">
               フェーズ3-1
             </span>
           </div>
@@ -302,7 +302,7 @@ export default function PlanningGenerator({
               <select
                 value={form.policy}
                 onChange={(e) => handleChange("policy", e.target.value)}
-                className="w-full rounded-lg border border-sky-100 bg-white px-3 py-2 text-sm shadow-inner focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-inner focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-100"
               >
                 <option value="バランス重視">バランス重視</option>
                 <option value="高たんぱく">高たんぱく</option>
@@ -319,7 +319,7 @@ export default function PlanningGenerator({
               <select
                 value={season}
                 onChange={(e) => setSeason(e.target.value)}
-                className="w-full rounded-lg border border-sky-100 bg-white px-3 py-2 text-sm shadow-inner focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-inner focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-100"
               >
                 <option value="">自動判定</option>
                 <option value="spring">春（3-5月）</option>
@@ -338,7 +338,7 @@ export default function PlanningGenerator({
                 value={maxCookingTime}
                 onChange={(e) => setMaxCookingTime(e.target.value === "" ? "" : Number(e.target.value))}
                 placeholder="例: 60"
-                className="w-full rounded-lg border border-sky-100 bg-white px-3 py-2 text-sm shadow-inner focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-inner focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-100"
               />
               <p className="text-xs text-slate-500">空欄は制限なし</p>
             </div>
@@ -351,7 +351,7 @@ export default function PlanningGenerator({
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-sky-600 to-teal-500 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-slate-800 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isPending ? "生成中..." : "AIで献立を作成"}
             </button>
@@ -361,7 +361,7 @@ export default function PlanningGenerator({
 
 
         {plan ? (
-          <div className="rounded-2xl border border-sky-100 bg-white/90 p-5 shadow-[0_12px_32px_rgba(14,94,156,0.06)]">
+          <div className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-[0_12px_32px_rgba(0,0,0,0.06)]">
             <WeekMenuTable plan={plan} budget={form.budget} onReplaceRecipe={openReplacement} />
           </div>
         ) : null}
@@ -390,7 +390,7 @@ export default function PlanningGenerator({
             </div>
 
             <div className="mt-4 grid gap-4 md:grid-cols-3">
-              <div className="rounded-xl border border-sky-100 bg-sky-50/60 p-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
                   現在のメニュー
                 </p>
@@ -429,7 +429,7 @@ export default function PlanningGenerator({
                       {candidates.map((r) => (
                         <tr
                           key={r.id}
-                          className={`cursor-pointer transition hover:bg-sky-50 ${selectedCandidate === r.id ? "bg-sky-50" : ""
+                          className={`cursor-pointer transition hover:bg-slate-50 ${selectedCandidate === r.id ? "bg-slate-100" : ""
                             }`}
                           onClick={() => setSelectedCandidate(r.id)}
                         >
@@ -453,7 +453,7 @@ export default function PlanningGenerator({
                     type="button"
                     disabled={!selectedCandidate || swapSaving}
                     onClick={applySwap}
-                    className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-sky-600 to-teal-500 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-70"
+                    className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-slate-800 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {swapSaving ? "保存中..." : "このレシピに差し替え"}
                   </button>
@@ -502,7 +502,7 @@ function FormField({
         min={1}
         value={value}
         onChange={(e) => onChange(Number(e.target.value) || 0)}
-        className="w-full rounded-lg border border-sky-100 bg-white px-3 py-2 text-sm shadow-inner focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-100"
+        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-inner focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-100"
       />
       {error ? <p className="text-xs text-rose-600">{error}</p> : null}
     </div>
